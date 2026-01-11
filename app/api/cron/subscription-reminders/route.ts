@@ -5,7 +5,10 @@ import { createClient } from '@supabase/supabase-js';
 const REMINDER_DAYS = [7, 3, 2, 1];
 
 export async function GET(req: Request) {
-  if (req.headers.get('x-cron-secret') !== process.env.CRON_SECRET) {
+  const { searchParams } = new URL(req.url);
+  const secret = searchParams.get('secret');
+
+  if (secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -20,19 +23,13 @@ export async function GET(req: Request) {
     const from = new Date(now + (days - 1) * 86400000).toISOString();
     const to = new Date(now + days * 86400000).toISOString();
 
-    const { data: restaurants, error } = await supabase
+    const { data: restaurants } = await supabase
       .from('restaurants')
       .select('id, name, subscription_expires_at')
       .gte('subscription_expires_at', from)
       .lt('subscription_expires_at', to);
 
-    if (error) {
-      console.error(error);
-      continue;
-    }
-
     for (const r of restaurants ?? []) {
-      // prevent duplicate reminders
       const { data: existing } = await supabase
         .from('notifications')
         .select('id')
