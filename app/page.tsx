@@ -103,7 +103,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
           <div className="flex items-center gap-2.5">
             <QrCode className="w-7 h-7 sm:w-8 sm:h-8 text-slate-900" />
-            <span className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">QR Menu</span>
+            <span className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">mtool menu</span>
           </div>
           <div className="flex gap-2 sm:gap-3">
             <Link href="/login">
@@ -140,8 +140,145 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* PROBLEM → SOLUTION */}
+      <section className="py-16 sm:py-20 px-4 bg-white/60">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center mb-8 sm:mb-12 text-slate-900">
+            The Problem with Traditional Menus
+          </h2>
+          <div className="grid sm:grid-cols-3 gap-6 sm:gap-8 mb-12">
+            <div className="text-center p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
+              <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">📄</span>
+              </div>
+              <h3 className="font-semibold text-slate-900 mb-2">Expensive to Print</h3>
+              <p className="text-sm text-slate-600">Every menu change means costly reprinting</p>
+            </div>
+            <div className="text-center p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
+              <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">⏰</span>
+              </div>
+              <h3 className="font-semibold text-slate-900 mb-2">Hard to Update</h3>
+              <p className="text-sm text-slate-600">Price changes and new items take days</p>
+            </div>
+            <div className="text-center p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
+              <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">😕</span>
+              </div>
+              <h3 className="font-semibold text-slate-900 mb-2">Poor Experience</h3>
+              <p className="text-sm text-slate-600">PDF menus are hard to read on phones</p>
+            </div>
+          </div>
+          <div className="text-center py-8 px-6 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700 text-white shadow-xl">
+            <h3 className="text-xl sm:text-2xl font-bold mb-3">mtool menu solves this</h3>
+            <p className="text-base sm:text-lg text-slate-100 max-w-2xl mx-auto">
+              A digital menu that updates instantly, looks beautiful on any device, and costs less than a single menu reprint.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section className="py-16 sm:py-20 lg:py-24 px-4">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-center mb-4 text-slate-900 tracking-tight">
+            How It Works
+          </h2>
+          <p className="text-base sm:text-lg text-slate-600 text-center mb-12 sm:mb-16">
+            Get your digital menu live in minutes
+          </p>
+          <div className="grid sm:grid-cols-3 gap-8 sm:gap-12">
+            <div className="text-center">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <span className="text-3xl sm:text-4xl font-bold">1</span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-bold mb-3 text-slate-900">Create Your Menu</h3>
+              <p className="text-slate-600 leading-relaxed">
+                Add your dishes, categories, and photos through our simple dashboard
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <span className="text-3xl sm:text-4xl font-bold">2</span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-bold mb-3 text-slate-900">Download Your QR</h3>
+              <p className="text-slate-600 leading-relaxed">
+                Generate and download your unique QR code to print or display
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <span className="text-3xl sm:text-4xl font-bold">3</span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-bold mb-3 text-slate-900">Customers Scan & View</h3>
+              <p className="text-slate-600 leading-relaxed">
+                Diners scan to see your beautiful menu instantly on their phone
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* DIVIDER */}
       <div className="max-w-6xl mx-auto px-4">
+        <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
+      </div>
+
+      {/* WHY CHOOSE */}
+      <section className="py-16 sm:py-20 px-4 bg-slate-50/50">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-center mb-12 sm:mb-16 text-slate-900 tracking-tight">
+            Why Choose mtool menu
+          </h2>
+          <div className="grid sm:grid-cols-2 gap-6 sm:gap-8 mb-12">
+            <div className="flex gap-4 items-start p-6 rounded-xl bg-white border border-slate-200 shadow-sm">
+              <Zap className="w-6 h-6 text-slate-900 flex-shrink-0 mt-1" />
+              <div>
+                <h3 className="font-bold text-slate-900 mb-2">Instant Updates</h3>
+                <p className="text-sm text-slate-600">Change prices or add items anytime. Updates go live immediately.</p>
+              </div>
+            </div>
+            <div className="flex gap-4 items-start p-6 rounded-xl bg-white border border-slate-200 shadow-sm">
+              <Shield className="w-6 h-6 text-slate-900 flex-shrink-0 mt-1" />
+              <div>
+                <h3 className="font-bold text-slate-900 mb-2">No App Required</h3>
+                <p className="text-sm text-slate-600">Customers just scan and view. Nothing to download or install.</p>
+              </div>
+            </div>
+            <div className="flex gap-4 items-start p-6 rounded-xl bg-white border border-slate-200 shadow-sm">
+              <div className="w-6 h-6 text-slate-900 flex-shrink-0 mt-1 text-xl">🇮🇳</div>
+              <div>
+                <h3 className="font-bold text-slate-900 mb-2">Built for Indian Restaurants</h3>
+                <p className="text-sm text-slate-600">UPI payments, INR pricing, and local support included.</p>
+              </div>
+            </div>
+            <div className="flex gap-4 items-start p-6 rounded-xl bg-white border border-slate-200 shadow-sm">
+              <div className="w-6 h-6 text-slate-900 flex-shrink-0 mt-1 text-xl">💰</div>
+              <div>
+                <h3 className="font-bold text-slate-900 mb-2">Affordable Pricing</h3>
+                <p className="text-sm text-slate-600">Costs less than printing new menus. No credit card required to start.</p>
+              </div>
+            </div>
+            <div className="flex gap-4 items-start p-6 rounded-xl bg-white border border-slate-200 shadow-sm">
+              <div className="w-6 h-6 text-slate-900 flex-shrink-0 mt-1 text-xl">📱</div>
+              <div>
+                <h3 className="font-bold text-slate-900 mb-2">Mobile-First Design</h3>
+                <p className="text-sm text-slate-600">Looks stunning on every phone. Your dishes shine with clear photos.</p>
+              </div>
+            </div>
+            <div className="flex gap-4 items-start p-6 rounded-xl bg-white border border-slate-200 shadow-sm">
+              <div className="w-6 h-6 text-slate-900 flex-shrink-0 mt-1 text-xl">✨</div>
+              <div>
+                <h3 className="font-bold text-slate-900 mb-2">Cancel Anytime</h3>
+                <p className="text-sm text-slate-600">No long-term contracts. Pause or cancel your subscription anytime.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* DIVIDER */}
+      <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
       </div>
 
@@ -258,7 +395,7 @@ export default function HomePage() {
 
       {/* FOOTER */}
       <footer className="border-t border-slate-200 bg-slate-50/50 py-10 sm:py-12 text-center">
-        <p className="text-sm sm:text-base text-slate-600">&copy; 2024 QR Menu. All rights reserved.</p>
+        <p className="text-sm sm:text-base text-slate-600">&copy; 2024 mtool menu. All rights reserved.</p>
       </footer>
     </div>
   );
