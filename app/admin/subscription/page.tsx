@@ -1,3 +1,4 @@
+// UI CHANGE: Enhanced subscription page with improved plan cards, better visual hierarchy, and clearer CTAs
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -10,6 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import { Restaurant } from '@/lib/types/database';
 import {
@@ -137,7 +139,7 @@ export default function SubscriptionPage() {
         key: data.keyId,
         amount: data.amount,
         currency: data.currency,
-        name: 'QR Menu',
+        name: 'mtoool menu',
         description: `Upgrade to ${plan.name}`,
         order_id: data.orderId,
         handler: async (response: any) => {
@@ -207,7 +209,7 @@ export default function SubscriptionPage() {
         key: data.keyId,
         amount: data.amount,
         currency: data.currency,
-        name: 'QR Menu',
+        name: 'mtoool menu',
         description: `Extend ${plan.name} plan`,
         order_id: data.orderId,
         handler: async (response: any) => {
@@ -238,7 +240,27 @@ export default function SubscriptionPage() {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-5 w-96" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-24" />
+          <Skeleton className="h-9 w-24" />
+        </div>
+        <Skeleton className="h-32 w-full" />
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Skeleton className="h-96 w-full" />
+          <Skeleton className="h-96 w-full" />
+          <Skeleton className="h-96 w-full" />
+          <Skeleton className="h-96 w-full" />
+        </div>
+      </div>
+    );
+  }
 
   const visiblePlans = plans.filter(
     (p) => p.billing_cycle === billingCycle
@@ -252,25 +274,25 @@ export default function SubscriptionPage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
           Subscription
         </h1>
-        <p className="text-slate-500 mt-1">
-          Upgrade anytime. Downgrades are handled by
-          support.
+        <p className="text-slate-600 mt-2 text-base">
+          Upgrade anytime. Downgrades are handled by support.
         </p>
       </div>
 
       {/* Billing Toggle */}
-      <div className="flex gap-2">
+      <div className="inline-flex rounded-xl border border-slate-200 p-1 bg-white shadow-sm">
         <Button
           size="sm"
           variant={
             billingCycle === 'monthly'
               ? 'default'
-              : 'outline'
+              : 'ghost'
           }
           onClick={() => setBillingCycle('monthly')}
+          className="rounded-lg"
         >
           Monthly
         </Button>
@@ -279,9 +301,10 @@ export default function SubscriptionPage() {
           variant={
             billingCycle === 'yearly'
               ? 'default'
-              : 'outline'
+              : 'ghost'
           }
           onClick={() => setBillingCycle('yearly')}
+          className="rounded-lg"
         >
           Yearly
         </Button>
@@ -289,19 +312,19 @@ export default function SubscriptionPage() {
 
       {/* Current Plan Card */}
       {restaurant && (
-        <Card className="bg-gradient-to-r from-slate-900 to-slate-700 text-white">
+        <Card className="bg-gradient-to-br from-slate-900 to-slate-700 text-white border-0 shadow-xl">
           <CardHeader>
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <CardTitle>
+                <CardTitle className="text-2xl">
                   Current Plan
                 </CardTitle>
-                <CardDescription className="text-slate-300">
+                <CardDescription className="text-slate-300 text-base mt-1">
                   {restaurant.name}
                 </CardDescription>
               </div>
-              <Badge className="text-lg px-4 py-2">
-                <Crown className="w-4 h-4 mr-1" />
+              <Badge className="bg-white text-slate-900 hover:bg-white text-base px-4 py-2 font-bold">
+                <Crown className="w-4 h-4 mr-1.5" />
                 {restaurant.subscription_plan.toUpperCase()}
               </Badge>
             </div>
@@ -310,7 +333,7 @@ export default function SubscriptionPage() {
       )}
 
       {/* Plans */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {visiblePlans.map((plan) => {
           const targetRank =
             PLAN_RANK[plan.code];
@@ -326,40 +349,42 @@ export default function SubscriptionPage() {
           return (
             <Card
               key={plan.id}
-              className={`relative ${
+              className={`relative flex flex-col hover:shadow-xl transition-all ${
                 plan.is_popular
-                  ? 'border-2 border-slate-900'
-                  : ''
+                  ? 'border-2 border-slate-900 shadow-lg scale-105'
+                  : 'border-slate-200 hover:border-slate-300'
               }`}
             >
               {plan.is_popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge className="bg-slate-900">
-                    <Sparkles className="w-3 h-3 mr-1" />
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <Badge className="bg-slate-900 text-white px-4 py-1.5 shadow-md">
+                    <Sparkles className="w-3.5 h-3.5 mr-1" />
                     Popular
                   </Badge>
                 </div>
               )}
 
-              <CardHeader>
-                <CardTitle>{plan.name}</CardTitle>
-                <CardDescription>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl">{plan.name}</CardTitle>
+                <CardDescription className="text-sm capitalize">
                   {plan.billing_cycle}
                 </CardDescription>
-                <div className="mt-4">
-                  <span className="text-3xl font-bold">
-                    ₹{plan.price_inr}
-                  </span>
-                  {plan.price_inr > 0 && (
-                    <span className="text-slate-500">
-                      /{plan.billing_cycle}
+                <div className="mt-6">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-extrabold text-slate-900">
+                      ₹{plan.price_inr}
                     </span>
-                  )}
+                    {plan.price_inr > 0 && (
+                      <span className="text-slate-500 text-sm">
+                        /{plan.billing_cycle}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
 
-              <CardContent className="space-y-4">
-                <ul className="space-y-2 text-sm">
+              <CardContent className="space-y-6 flex-1 flex flex-col">
+                <ul className="space-y-3 text-sm flex-1">
                   {Object.entries(plan.features)
                     .map(([key, value]) => {
                       const formatter =
@@ -373,47 +398,49 @@ export default function SubscriptionPage() {
                       return (
                         <li
                           key={key}
-                          className="flex gap-2"
+                          className="flex gap-2.5 items-start"
                         >
-                          <Check className="w-4 h-4 text-green-600 mt-0.5" />
-                          <span>{label}</span>
+                          <Check className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <span className="text-slate-700">{label}</span>
                         </li>
                       );
                     })}
                 </ul>
 
                 {/* Action */}
-                {isCurrent ? (
-                  <Button
-                    className="w-full"
-                    variant="outline"
-                    onClick={() => handleExtend(plan)}
-                  >
-                    Extend Plan
-                  </Button>
-                ) : isUpgrade ? (
-                  <Button
-                    className="w-full"
-                    onClick={() =>
-                      handleUpgrade(plan)
-                    }
-                  >
-                    Upgrade
-                    <ArrowUpRight className="w-4 h-4 ml-1" />
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() =>
-                      window.location.href =
-                        'mailto:support@yourapp.com'
-                    }
-                  >
-                    Contact Support
-                    <Mail className="w-4 h-4 ml-1" />
-                  </Button>
-                )}
+                <div className="pt-4">
+                  {isCurrent ? (
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      onClick={() => handleExtend(plan)}
+                    >
+                      Extend Plan
+                    </Button>
+                  ) : isUpgrade ? (
+                    <Button
+                      className="w-full shadow-md hover:shadow-lg"
+                      onClick={() =>
+                        handleUpgrade(plan)
+                      }
+                    >
+                      Upgrade
+                      <ArrowUpRight className="w-4 h-4 ml-1.5" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() =>
+                        window.location.href =
+                          'mailto:support@yourapp.com'
+                      }
+                    >
+                      Contact Support
+                      <Mail className="w-4 h-4 ml-1.5" />
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           );

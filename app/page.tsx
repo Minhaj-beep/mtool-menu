@@ -102,8 +102,11 @@ export default function HomePage() {
       <nav className="border-b border-slate-200/60 bg-white/90 backdrop-blur-md sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
           <div className="flex items-center gap-2.5">
-            <QrCode className="w-7 h-7 sm:w-8 sm:h-8 text-slate-900" />
-            <span className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">mtool menu</span>
+            <img
+              src="/android-chrome-512x512.png"
+              className="w-10 h-10 md:w-15 md:h-15 rounded-md"
+            />
+            <span className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">mtoool menu</span>
           </div>
           <div className="flex gap-2 sm:gap-3">
             <Link href="/login">
@@ -170,7 +173,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="text-center py-8 px-6 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700 text-white shadow-xl">
-            <h3 className="text-xl sm:text-2xl font-bold mb-3">mtool menu solves this</h3>
+            <h3 className="text-xl sm:text-2xl font-bold mb-3">mtoool menu solves this</h3>
             <p className="text-base sm:text-lg text-slate-100 max-w-2xl mx-auto">
               A digital menu that updates instantly, looks beautiful on any device, and costs less than a single menu reprint.
             </p>
@@ -228,7 +231,7 @@ export default function HomePage() {
       <section className="py-16 sm:py-20 px-4 bg-slate-50/50">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-center mb-12 sm:mb-16 text-slate-900 tracking-tight">
-            Why Choose mtool menu
+            Why Choose mtoool menu
           </h2>
           <div className="grid sm:grid-cols-2 gap-6 sm:gap-8 mb-12">
             <div className="flex gap-4 items-start p-6 rounded-xl bg-white border border-slate-200 shadow-sm">
@@ -395,7 +398,7 @@ export default function HomePage() {
 
       {/* FOOTER */}
       <footer className="border-t border-slate-200 bg-slate-50/50 py-10 sm:py-12 text-center">
-        <p className="text-sm sm:text-base text-slate-600">&copy; 2024 mtool menu. All rights reserved.</p>
+        <p className="text-sm sm:text-base text-slate-600">&copy; 2024 mtoool menu. All rights reserved.</p>
       </footer>
     </div>
   );

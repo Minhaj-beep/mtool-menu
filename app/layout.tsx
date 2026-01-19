@@ -6,24 +6,36 @@ import { Toaster } from 'sonner';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'QR Menu - Digital Menu Management',
-  description: 'Manage your restaurant digital menu with QR codes',
+  title: `mtoool Menu - India's #1 Digital Menu Management Platform`,
+  description: "mtoool Menu: The ultimate QR code menu builder for restaurants. Features real-time digital menu management, contactless ordering, and integrated Google Review tools to increase your restaurant's visibility and customer satisfaction.",
+
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
+
   openGraph: {
     images: [
       {
-        url: 'https://bolt.new/static/og_default.png',
+        url: '/banner.png',
       },
     ],
   },
+
   twitter: {
     card: 'summary_large_image',
     images: [
       {
-        url: 'https://bolt.new/static/og_default.png',
+        url: '/banner.png',
       },
     ],
   },
 };
+
 
 export default function RootLayout({
   children,

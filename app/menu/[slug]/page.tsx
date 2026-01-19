@@ -319,6 +319,30 @@ export default function PublicMenuPage() {
     ? PLAN_LIMITS[restaurant.subscription_plan]
     : null;
 
+  const lastTrackedDishRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    console.log("Is is working? ", selectedDish, restaurant)
+    if (!selectedDish || !restaurant) return;
+
+    if (
+      restaurant.subscription_plan !== 'pro' &&
+      restaurant.subscription_plan !== 'enterprise'
+    ) return;
+
+    if (lastTrackedDishRef.current === selectedDish.id) return;
+    lastTrackedDishRef.current = selectedDish.id;
+
+    fetch('/api/analytics/dish-view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        dish_id: selectedDish.id,
+        restaurant_id: restaurant.id,
+      }),
+    });
+  }, [selectedDish, restaurant]);
+
   const showGoogleReview =
     planLimits?.googleReviewEnabled && restaurant?.google_place_id;
 

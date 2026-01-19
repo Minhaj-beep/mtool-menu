@@ -2,6 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import {
+  DndContext,
+  closestCenter,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -23,8 +35,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Skeleton } from '@/components/ui/skeleton';
+
 import { supabaseBrowser } from '@/lib/supabase/browser';
-import { Plus, Trash2, ChevronRight } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  ChevronRight,
+  FolderOpen,
+  GripVertical,
+  Pencil,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 /* -------------------------------------------------------------------------- */
@@ -39,6 +60,48 @@ type MenuCategory = {
 };
 
 /* -------------------------------------------------------------------------- */
+/*                           SORTABLE WRAPPER                                  */
+/* -------------------------------------------------------------------------- */
+
+function SortableCategory({
+  category,
+  children,
+}: {
+  category: MenuCategory;
+  children: React.ReactNode;
+}) {
+  const {
+    setNodeRef,
+    attributes,
+    listeners,
+    transform,
+    transition,
+  } = useSortable({ id: category.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <div className="flex gap-3">
+        <div
+          {...listeners}
+          {...attributes}
+          className="flex items-center cursor-grab text-slate-400 hover:text-slate-600"
+        >
+          <GripVertical />
+        </div>
+        <div className="flex-1">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                   PAGE                                     */
+/* -------------------------------------------------------------------------- */
 
 export default function MenuCategoriesPage() {
   const [categories, setCategories] = useState<MenuCategory[]>([]);
@@ -48,34 +111,33 @@ export default function MenuCategoriesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
 
+  const [editingCategory, setEditingCategory] =
+    useState<MenuCategory | null>(null);
+  const [editName, setEditName] = useState('');
+
   useEffect(() => {
     loadCategories();
   }, []);
 
   /* -------------------------------------------------------------------------- */
-  /*                              LOAD CATEGORIES                                */
+  /*                              LOAD CATEGORIES                               */
   /* -------------------------------------------------------------------------- */
 
   const loadCategories = async () => {
     setLoading(true);
-
     try {
       const {
         data: { user },
       } = await supabaseBrowser.auth.getUser();
-
       if (!user) return;
 
-      const { data: restaurant, error: restaurantError } =
-        await supabaseBrowser
-          .from('restaurants')
-          .select('id')
-          .eq('owner_id', user.id)
-          .single();
+      const { data: restaurant } = await supabaseBrowser
+        .from('restaurants')
+        .select('id')
+        .eq('owner_id', user.id)
+        .single();
 
-      if (restaurantError || !restaurant) {
-        throw new Error('Restaurant not found');
-      }
+      if (!restaurant) throw new Error('Restaurant not found');
 
       setRestaurantId(restaurant.id);
 
@@ -94,25 +156,23 @@ export default function MenuCategoriesPage() {
 
       if (error) throw error;
 
-      const formatted: MenuCategory[] =
-        data?.map((category) => ({
-          id: category.id,
-          name: category.name,
-          is_active: category.is_active,
-          dishes_count:
-            category.dishes?.[0]?.count ?? 0,
-        })) ?? [];
-
-      setCategories(formatted);
-    } catch (error: any) {
-      toast.error(error.message);
+      setCategories(
+        data.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          is_active: c.is_active,
+          dishes_count: c.dishes?.[0]?.count ?? 0,
+        }))
+      );
+    } catch (e: any) {
+      toast.error(e.message);
     } finally {
       setLoading(false);
     }
   };
 
   /* -------------------------------------------------------------------------- */
-  /*                            CREATE CATEGORY                                  */
+  /*                              CREATE CATEGORY                               */
   /* -------------------------------------------------------------------------- */
 
   const createCategory = async () => {
@@ -122,7 +182,7 @@ export default function MenuCategoriesPage() {
     }
 
     try {
-      const response = await fetch('/api/categories', {
+      const res = await fetch('/api/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -133,79 +193,118 @@ export default function MenuCategoriesPage() {
         }),
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error('Failed to create');
 
       toast.success('Category created');
       setNewCategoryName('');
       setDialogOpen(false);
       loadCategories();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (e: any) {
+      toast.error(e.message);
     }
   };
 
   /* -------------------------------------------------------------------------- */
-  /*                         TOGGLE CATEGORY ACTIVE                              */
+  /*                              UPDATE NAME                                   */
   /* -------------------------------------------------------------------------- */
 
-  const toggleCategoryActive = async (
-    categoryId: string,
-    current: boolean
-  ) => {
+  const updateCategoryName = async () => {
+    if (!editingCategory) return;
+
     try {
-      const response = await fetch(
-        `/api/categories/${categoryId}`,
+      const res = await fetch(
+        `/api/categories/${editingCategory.id}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            is_active: !current,
-          }),
+          body: JSON.stringify({ name: editName }),
         }
       );
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error('Failed to update');
 
+      toast.success('Category updated');
+      setEditingCategory(null);
       loadCategories();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (e: any) {
+      toast.error(e.message);
     }
   };
 
   /* -------------------------------------------------------------------------- */
-  /*                            DELETE CATEGORY                                  */
+  /*                              TOGGLE ACTIVE                                 */
+  /* -------------------------------------------------------------------------- */
+
+  const toggleCategoryActive = async (
+    id: string,
+    current: boolean
+  ) => {
+    try {
+      await fetch(`/api/categories/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: !current }),
+      });
+      loadCategories();
+    } catch {
+      toast.error('Failed to update');
+    }
+  };
+
+  /* -------------------------------------------------------------------------- */
+  /*                              DELETE CATEGORY                                */
   /* -------------------------------------------------------------------------- */
 
   const deleteCategory = async (category: MenuCategory) => {
     if (category.is_active) {
-      toast.error('Deactivate category before deleting');
+      toast.error('Deactivate category first');
       return;
     }
 
-    if (
-      !confirm(
-        'Are you sure? This will delete all dishes inside this category.'
-      )
-    ) {
-      return;
-    }
+    if (!confirm('Delete this category and all dishes?')) return;
 
     try {
-      const response = await fetch(
-        `/api/categories/${category.id}`,
-        { method: 'DELETE' }
-      );
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
-
+      await fetch(`/api/categories/${category.id}`, {
+        method: 'DELETE',
+      });
       toast.success('Category deleted');
       loadCategories();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch {
+      toast.error('Delete failed');
     }
+  };
+
+  /* -------------------------------------------------------------------------- */
+  /*                              DRAG & DROP                                   */
+  /* -------------------------------------------------------------------------- */
+
+  const handleDragEnd = async (event: any) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = categories.findIndex(
+      (c) => c.id === active.id
+    );
+    const newIndex = categories.findIndex(
+      (c) => c.id === over.id
+    );
+
+    const reordered = arrayMove(
+      categories,
+      oldIndex,
+      newIndex
+    );
+
+    setCategories(reordered);
+
+    await Promise.all(
+      reordered.map((cat, index) =>
+        supabaseBrowser
+          .from('menu_categories')
+          .update({ display_order: index })
+          .eq('id', cat.id)
+      )
+    );
   };
 
   /* -------------------------------------------------------------------------- */
@@ -213,18 +312,22 @@ export default function MenuCategoriesPage() {
   /* -------------------------------------------------------------------------- */
 
   if (loading) {
-    return <div className="p-6">Loading...</div>;
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-32" />
+        <Skeleton className="h-32" />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* HEADER */}
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">
-            Menu Categories
-          </h1>
-          <p className="text-slate-500 mt-1">
+          <h1 className="text-4xl font-bold">Menu Categories</h1>
+          <p className="text-slate-600">
             {categories.length} categories
           </p>
         </div>
@@ -236,24 +339,16 @@ export default function MenuCategoriesPage() {
               Add Category
             </Button>
           </DialogTrigger>
-
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add Category</DialogTitle>
-              <DialogDescription>
-                Create a new menu category
-              </DialogDescription>
             </DialogHeader>
-
-            <Label>Category name</Label>
             <Input
-              placeholder="e.g. Starters"
               value={newCategoryName}
               onChange={(e) =>
                 setNewCategoryName(e.target.value)
               }
             />
-
             <DialogFooter>
               <Button onClick={createCategory}>
                 Create
@@ -263,72 +358,112 @@ export default function MenuCategoriesPage() {
         </Dialog>
       </div>
 
-      {/* Categories */}
-      <div className="grid gap-4">
-        {categories.map((category) => (
-          <Card key={category.id}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>{category.name}</CardTitle>
-                  <CardDescription>
-                    {category.dishes_count} dishes
-                  </CardDescription>
-                </div>
+      {/* EMPTY */}
+      {categories.length === 0 && (
+        <Card className="border-dashed">
+          <CardContent className="py-16 text-center">
+            <FolderOpen className="mx-auto mb-4" />
+            No categories yet
+          </CardContent>
+        </Card>
+      )}
 
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={category.is_active}
-                      onCheckedChange={() =>
-                        toggleCategoryActive(
-                          category.id,
-                          category.is_active
-                        )
-                      }
-                    />
-                    <Badge
-                      variant={
-                        category.is_active
-                          ? 'default'
-                          : 'secondary'
-                      }
-                    >
-                      {category.is_active
-                        ? 'Active'
-                        : 'Inactive'}
-                    </Badge>
-                  </div>
+      {/* LIST */}
+      <DndContext
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={categories.map((c) => c.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-4">
+            {categories.map((category) => (
+              <SortableCategory
+                key={category.id}
+                category={category}
+              >
+                <Card>
+                  <CardHeader className="flex flex-row justify-between">
+                    <div>
+                      <CardTitle>{category.name}</CardTitle>
+                      <CardDescription>
+                        {category.dishes_count} dishes
+                      </CardDescription>
+                    </div>
 
-                  {restaurantId && (
-                    <Link
-                      href={`/admin/restaurants/${restaurantId}/categories/${category.id}`}
-                    >
+                    <div className="flex gap-2 items-center">
+                      <Switch
+                        checked={category.is_active}
+                        onCheckedChange={() =>
+                          toggleCategoryActive(
+                            category.id,
+                            category.is_active
+                          )
+                        }
+                      />
+
                       <Button
-                        variant="outline"
-                        size="sm"
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditingCategory(category);
+                          setEditName(category.name);
+                        }}
                       >
-                        Edit
-                        <ChevronRight className="w-4 h-4 ml-1" />
+                        <Pencil />
                       </Button>
-                    </Link>
-                  )}
 
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      deleteCategory(category)
-                    }
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-        ))}
-      </div>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-red-600"
+                        onClick={() =>
+                          deleteCategory(category)
+                        }
+                      >
+                        <Trash2 />
+                      </Button>
+
+                      {restaurantId && (
+                        <Link
+                          href={`/admin/restaurants/${restaurantId}/${category.id}`}
+                        >
+                          <Button size="sm" variant="outline">
+                            Edit Dishes
+                            <ChevronRight className="ml-1 w-4 h-4" />
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  </CardHeader>
+                </Card>
+              </SortableCategory>
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+
+      {/* EDIT DIALOG */}
+      <Dialog
+        open={!!editingCategory}
+        onOpenChange={() => setEditingCategory(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Category</DialogTitle>
+          </DialogHeader>
+          <Input
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+          />
+          <DialogFooter>
+            <Button onClick={updateCategoryName}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

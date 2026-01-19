@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route';
+import { deleteS3File, extractS3Key } from '@/lib/aws/s3';
 
 export async function PUT(
   request: NextRequest,
@@ -9,16 +10,32 @@ export async function PUT(
     const supabase = createSupabaseRouteClient();
 
     const { data: { user } } = await supabase.auth.getUser();
-
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const updates = await request.json();
 
+    // 1️⃣ Fetch existing image
+    const { data: existingDish } = await supabase
+      .from('dishes')
+      .select('image_url')
+      .eq('id', params.id)
+      .single();
+
+    // 2️⃣ If image changed → delete old image
+    if (
+      existingDish?.image_url &&
+      updates.image_url &&
+      existingDish.image_url !== updates.image_url
+    ) {
+      const oldKey = extractS3Key(existingDish.image_url);
+      if (oldKey) {
+        await deleteS3File(oldKey);
+      }
+    }
+
+    // 3️⃣ Update dish
     const { data: dish, error } = await supabase
       .from('dishes')
       .update({
@@ -54,22 +71,41 @@ export async function DELETE(
     const supabase = createSupabaseRouteClient();
 
     const { data: { user } } = await supabase.auth.getUser();
-
     if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // 1️⃣ Fetch dish image first
+    const { data: dish, error: fetchError } = await supabase
+      .from('dishes')
+      .select('image_url')
+      .eq('id', params.id)
+      .single();
+
+    if (fetchError) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: fetchError.message },
+        { status: 400 }
       );
     }
 
-    const { error } = await supabase
+    // 2️⃣ Delete image from S3 (if exists)
+    if (dish?.image_url) {
+      const key = extractS3Key(dish.image_url);
+      if (key) {
+        await deleteS3File(key);
+      }
+    }
+
+    // 3️⃣ Delete dish row
+    const { error: deleteError } = await supabase
       .from('dishes')
       .delete()
       .eq('id', params.id);
 
-    if (error) {
+    if (deleteError) {
       return NextResponse.json(
-        { error: error.message },
+        { error: deleteError.message },
         { status: 400 }
       );
     }
