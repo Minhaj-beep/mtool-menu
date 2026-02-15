@@ -193,7 +193,11 @@ export default function MenuCategoriesPage() {
         }),
       });
 
-      if (!res.ok) throw new Error('Failed to create');
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to create category');
+      }
 
       toast.success('Category created');
       setNewCategoryName('');

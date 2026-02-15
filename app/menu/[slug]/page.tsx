@@ -787,7 +787,7 @@ export default function PublicMenuPage() {
               <div className="inline-flex items-center gap-2 px-6 py-3 bg-white rounded-full shadow-sm border border-slate-200">
                 <Utensils className="w-4 h-4 text-slate-400" />
                 <p className="text-sm text-slate-600">
-                  Powered by <span className="font-bold text-slate-900">QR Menu</span>
+                  Powered by <span className="font-bold text-slate-900">mtoool menu</span>
                 </p>
               </div>
             </div>

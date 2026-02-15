@@ -9,25 +9,46 @@ export async function PUT(
   try {
     const supabase = createSupabaseRouteClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     const updates = await request.json();
 
-    // 1️⃣ Fetch existing image
-    const { data: existingDish } = await supabase
-      .from('dishes')
-      .select('image_url')
-      .eq('id', params.id)
-      .single();
+    // 1️⃣ Fetch existing dish image
+    const { data: existingDish, error: fetchError } =
+      await supabase
+        .from('dishes')
+        .select('image_url')
+        .eq('id', params.id)
+        .single();
 
-    // 2️⃣ If image changed → delete old image
+    if (fetchError) {
+      return NextResponse.json(
+        { error: fetchError.message },
+        { status: 400 }
+      );
+    }
+
+    // 2️⃣ Normalize incoming image_url
+    const newImageUrl =
+      typeof updates.image_url === 'string' &&
+      updates.image_url.trim() !== ''
+        ? updates.image_url
+        : null;
+
+    // 3️⃣ Delete old image ONLY if replaced
     if (
       existingDish?.image_url &&
-      updates.image_url &&
-      existingDish.image_url !== updates.image_url
+      newImageUrl &&
+      existingDish.image_url !== newImageUrl
     ) {
       const oldKey = extractS3Key(existingDish.image_url);
       if (oldKey) {
@@ -35,7 +56,12 @@ export async function PUT(
       }
     }
 
-    // 3️⃣ Update dish
+    // 4️⃣ Prevent empty string overwrite
+    if (!newImageUrl) {
+      delete updates.image_url;
+    }
+
+    // 5️⃣ Update dish
     const { data: dish, error } = await supabase
       .from('dishes')
       .update({
@@ -70,17 +96,24 @@ export async function DELETE(
   try {
     const supabase = createSupabaseRouteClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    // 1️⃣ Fetch dish image first
-    const { data: dish, error: fetchError } = await supabase
-      .from('dishes')
-      .select('image_url')
-      .eq('id', params.id)
-      .single();
+    // 1️⃣ Fetch dish image
+    const { data: dish, error: fetchError } =
+      await supabase
+        .from('dishes')
+        .select('image_url')
+        .eq('id', params.id)
+        .single();
 
     if (fetchError) {
       return NextResponse.json(
@@ -110,7 +143,9 @@ export async function DELETE(
       );
     }
 
-    return NextResponse.json({ message: 'Dish deleted successfully' });
+    return NextResponse.json({
+      message: 'Dish deleted successfully',
+    });
   } catch (error) {
     console.error('Delete dish error:', error);
     return NextResponse.json(
