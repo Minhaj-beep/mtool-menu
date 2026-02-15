@@ -1,4 +1,4 @@
-// UI CHANGE: Enhanced settings page with better form layout, improved spacing, and visual hierarchy
+// UI CHANGE: Enhanced settings page with Google Place ID instructions + YouTube video
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -16,13 +16,21 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import { Restaurant } from '@/lib/types/database';
 import { toast } from 'sonner';
-import { Save, Upload, X, Link as LinkIcon } from 'lucide-react';
+import {
+  Save,
+  Upload,
+  X,
+  Link as LinkIcon,
+  ExternalLink,
+  HelpCircle,
+} from 'lucide-react';
 
 export default function SettingsPage() {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
@@ -31,6 +39,8 @@ export default function SettingsPage() {
     theme_color: '#000000',
     logo_url: '',
   });
+
+  /* ================= Load ================= */
 
   useEffect(() => {
     loadRestaurant();
@@ -42,35 +52,33 @@ export default function SettingsPage() {
         data: { user },
       } = await supabaseBrowser.auth.getUser();
 
-      if (!user) {
-        throw new Error('Not authenticated');
-      }
+      if (!user) throw new Error('Not authenticated');
 
-      const { data: restaurantData, error } =
-        await supabaseBrowser
-          .from('restaurants')
-          .select('*')
-          .eq('owner_id', user.id)
-          .maybeSingle();
+      const { data, error } = await supabaseBrowser
+        .from('restaurants')
+        .select('*')
+        .eq('owner_id', user.id)
+        .maybeSingle();
 
-      if (error || !restaurantData) {
+      if (error || !data)
         throw new Error('Restaurant not found');
-      }
 
-      setRestaurant(restaurantData);
+      setRestaurant(data);
 
       setFormData({
-        name: restaurantData.name,
-        google_place_id: restaurantData.google_place_id ?? '',
-        theme_color: restaurantData.theme_color ?? '#000000',
-        logo_url: restaurantData.logo_url ?? '',
+        name: data.name,
+        google_place_id: data.google_place_id ?? '',
+        theme_color: data.theme_color ?? '#000000',
+        logo_url: data.logo_url ?? '',
       });
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load restaurant');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load restaurant');
     } finally {
       setLoading(false);
     }
   };
+
+  /* ================= Logo Upload ================= */
 
   const handleLogoUpload = async (
     e: React.ChangeEvent<HTMLInputElement>
@@ -91,45 +99,46 @@ export default function SettingsPage() {
     setUploadingLogo(true);
 
     try {
-      const presignedResponse = await fetch(
-        '/api/upload/presigned-url',
-        {
+      const presignedResponse =
+        await fetch('/api/upload/presigned-url', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify({
             fileName: file.name,
             fileType: file.type,
           }),
-        }
-      );
+        });
 
-      const presignedData = await presignedResponse.json();
+      const presignedData =
+        await presignedResponse.json();
 
-      if (!presignedResponse.ok) {
+      if (!presignedResponse.ok)
         throw new Error(presignedData.error);
-      }
 
       const uploadResponse = await fetch(
         presignedData.uploadUrl,
         {
           method: 'PUT',
-          headers: { 'Content-Type': file.type },
+          headers: {
+            'Content-Type': file.type,
+          },
           body: file,
         }
       );
 
-      if (!uploadResponse.ok) {
-        throw new Error('Failed to upload logo');
-      }
+      if (!uploadResponse.ok)
+        throw new Error('Upload failed');
 
       setFormData((prev) => ({
         ...prev,
         logo_url: presignedData.fileUrl,
       }));
 
-      toast.success('Logo uploaded successfully');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to upload logo');
+      toast.success('Logo uploaded');
+    } catch (err: any) {
+      toast.error(err.message);
     } finally {
       setUploadingLogo(false);
     }
@@ -142,26 +151,33 @@ export default function SettingsPage() {
     }));
   };
 
+  /* ================= Save ================= */
+
   const handleSave = async () => {
     setSaving(true);
 
     try {
-      const response = await fetch('/api/restaurant', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
+      const response = await fetch(
+        '/api/restaurant',
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        }
+      );
 
       const data = await response.json();
 
-      if (!response.ok) {
+      if (!response.ok)
         throw new Error(data.error);
-      }
 
-      toast.success('Settings saved successfully');
       setRestaurant(data.restaurant);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to save settings');
+
+      toast.success('Saved successfully');
+    } catch (err: any) {
+      toast.error(err.message);
     } finally {
       setSaving(false);
     }
@@ -172,56 +188,47 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="space-y-6 max-w-3xl">
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-48" />
-          <Skeleton className="h-5 w-96" />
-        </div>
-        <div className="space-y-4">
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-48 w-full" />
-        </div>
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
 
   if (!restaurant) {
-    return (
-      <Card className="border-slate-200">
-        <CardContent className="pt-6">
-          <p className="text-sm text-slate-500 text-center">
-            No restaurant found. Please set up your restaurant first.
-          </p>
-        </CardContent>
-      </Card>
-    );
+    return <div>No restaurant found</div>;
   }
 
   /* ================= UI ================= */
 
   return (
     <div className="space-y-6 max-w-3xl">
+
+      {/* Header */}
       <div>
-        <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+        <h1 className="text-3xl font-bold">
           Settings
         </h1>
-        <p className="text-slate-600 mt-2 text-base">
-          Manage your restaurant settings and branding
+        <p className="text-muted-foreground">
+          Manage your restaurant settings
         </p>
       </div>
 
-      <Card className="border-slate-200 shadow-sm">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Restaurant Information</CardTitle>
-          <CardDescription className="text-base">
-            Update your restaurant details and appearance
+          <CardTitle>
+            Restaurant Information
+          </CardTitle>
+          <CardDescription>
+            Update branding and integrations
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-6">
+
+          {/* Name */}
           <div className="space-y-2">
-            <Label htmlFor="name" className="text-sm font-semibold">Restaurant Name</Label>
+            <Label>Restaurant Name</Label>
             <Input
-              id="name"
               value={formData.name}
               onChange={(e) =>
                 setFormData({
@@ -229,133 +236,181 @@ export default function SettingsPage() {
                   name: e.target.value,
                 })
               }
-              className="text-base"
             />
           </div>
 
+          {/* Logo */}
           <div className="space-y-2">
-            <Label className="text-sm font-semibold">Restaurant Logo</Label>
-            <p className="text-xs text-slate-500">Upload your restaurant logo (max 5MB)</p>
-            <div className="mt-2">
-              {formData.logo_url ? (
-                <div className="flex items-center gap-4">
-                  <img
-                    src={formData.logo_url}
-                    alt="Restaurant logo"
-                    className="w-24 h-24 object-cover rounded-lg border-2 border-slate-200"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRemoveLogo}
-                    disabled={uploadingLogo || saving}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    Remove Logo
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoUpload}
-                    className="hidden"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() =>
-                      fileInputRef.current?.click()
-                    }
-                    disabled={uploadingLogo || saving}
-                    className="hover:bg-slate-100"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    {uploadingLogo
-                      ? 'Uploading...'
-                      : 'Upload Logo'}
-                  </Button>
-                </>
-              )}
-            </div>
+            <Label>Logo</Label>
+
+            {formData.logo_url ? (
+              <div className="flex gap-4 items-center">
+                <img
+                  src={formData.logo_url}
+                  className="w-20 h-20 rounded border"
+                />
+
+                <Button
+                  variant="outline"
+                  onClick={handleRemoveLogo}
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Remove
+                </Button>
+              </div>
+            ) : (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleLogoUpload}
+                />
+
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    fileInputRef.current?.click()
+                  }
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Logo
+                </Button>
+              </>
+            )}
           </div>
 
+          {/* URL Slug */}
           <div className="space-y-2">
-            <Label className="text-sm font-semibold flex items-center gap-2">
-              <LinkIcon className="w-4 h-4" />
-              URL Slug
-            </Label>
-            <Input value={restaurant.slug} disabled className="bg-slate-50" />
-            <p className="text-xs text-slate-500">
-              Your menu URL: <span className="font-mono">/menu/{restaurant.slug}</span>
-            </p>
-          </div>
+            <Label>Menu URL</Label>
 
-          <div className="space-y-2">
-            <Label htmlFor="google_place_id" className="text-sm font-semibold">Google Place ID</Label>
             <Input
-              id="google_place_id"
+              value={`/menu/${restaurant.slug}`}
+              disabled
+            />
+          </div>
+
+          {/* GOOGLE PLACE ID SECTION */}
+          <div className="space-y-3">
+
+            <Label className="flex gap-2 items-center">
+              Google Place ID
+              <HelpCircle className="w-4 h-4 text-muted-foreground" />
+            </Label>
+
+            <Input
               value={formData.google_place_id}
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  google_place_id: e.target.value,
+                  google_place_id:
+                    e.target.value,
                 })
               }
-              placeholder="Optional: Enter your Google Place ID"
-              className="text-base"
+              placeholder="Enter Google Place ID"
             />
-            <p className="text-xs text-slate-500">
-              Used for Google review integration
-            </p>
+
+            {/* Instructions */}
+            <div className="bg-slate-50 border rounded-lg p-4 space-y-3">
+
+              <p className="text-sm font-medium">
+                How to find your Google Place ID:
+              </p>
+
+              <ol className="text-sm text-muted-foreground space-y-1 list-decimal ml-4">
+                <li>
+                  Open Google Place ID Finder
+                </li>
+                <li>
+                  Search your restaurant name
+                </li>
+                <li>
+                  Click your restaurant
+                </li>
+                <li>
+                  Copy the Place ID
+                </li>
+                <li>
+                  Paste it above
+                </li>
+              </ol>
+
+              {/* Direct link */}
+              <a
+                href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder"
+                target="_blank"
+                className="inline-flex items-center text-sm text-blue-600 hover:underline"
+              >
+                Open Google Place ID Finder
+                <ExternalLink className="w-4 h-4 ml-1" />
+              </a>
+
+              {/* YouTube video */}
+              <div className="pt-3">
+                <p className="text-sm font-medium mb-2">
+                  Video tutorial:
+                </p>
+
+                <div className="aspect-video rounded overflow-hidden border">
+                  <iframe
+                    className="w-full h-full"
+                    src="https://www.youtube.com/embed/hkPQ36UXF28"
+                    title="How to find Google Place ID"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
+
+            </div>
+
           </div>
 
+          {/* Theme Color */}
           <div className="space-y-2">
-            <Label htmlFor="theme_color" className="text-sm font-semibold">Theme Color</Label>
-            <p className="text-xs text-slate-500">Choose your brand color for the menu</p>
-            <div className="flex gap-3 items-center">
+            <Label>Theme Color</Label>
+
+            <div className="flex gap-2">
               <Input
-                id="theme_color"
                 type="color"
                 value={formData.theme_color}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    theme_color: e.target.value,
+                    theme_color:
+                      e.target.value,
                   })
                 }
-                className="w-20 h-12 cursor-pointer"
+                className="w-20"
               />
+
               <Input
                 value={formData.theme_color}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    theme_color: e.target.value,
+                    theme_color:
+                      e.target.value,
                   })
                 }
-                placeholder="#000000"
-                className="flex-1 font-mono"
               />
             </div>
           </div>
 
-          <div className="pt-4 border-t">
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              className="w-full sm:w-auto shadow-sm hover:shadow-md transition-all"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </div>
+          {/* Save */}
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+          >
+            <Save className="w-4 h-4 mr-2" />
+
+            {saving
+              ? 'Saving...'
+              : 'Save Changes'}
+          </Button>
+
         </CardContent>
       </Card>
+
     </div>
   );
 }

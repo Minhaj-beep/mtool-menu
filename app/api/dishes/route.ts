@@ -2,23 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route';
 import { canPerformAction } from '@/lib/subscription/plans';
 
-/* -------------------------------------------------
-   GET /api/dishes?categoryId=uuid
--------------------------------------------------- */
+/* =====================================================
+   GET dishes by category
+===================================================== */
 export async function GET(request: NextRequest) {
   try {
     const supabase = createSupabaseRouteClient();
+
     const { searchParams } = new URL(request.url);
     const categoryId = searchParams.get('categoryId');
 
     if (!categoryId) {
       return NextResponse.json(
-        { error: 'Category ID is required' },
+        { error: 'Category ID required' },
         { status: 400 }
       );
     }
 
-    const { data: dishes, error } = await supabase
+    const { data, error } = await supabase
       .from('dishes')
       .select('*')
       .eq('category_id', categoryId)
@@ -31,26 +32,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ dishes });
-  } catch (error) {
-    console.error('Get dishes error:', error);
+    return NextResponse.json({ dishes: data });
+
+  } catch (err) {
+    console.error(err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Server error' },
       { status: 500 }
     );
   }
 }
 
-/* -------------------------------------------------
-   POST /api/dishes
--------------------------------------------------- */
+
+/* =====================================================
+   CREATE dish
+===================================================== */
 export async function POST(request: NextRequest) {
   try {
     const supabase = createSupabaseRouteClient();
 
-    /* 1️⃣ Auth check */
     const {
-      data: { user },
+      data: { user }
     } = await supabase.auth.getUser();
 
     if (!user) {
@@ -60,15 +62,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    /* 2️⃣ Parse body */
+    const body = await request.json();
+
     const {
       name,
       description,
       price,
       image_url,
       is_available,
-      category_id,
-    } = await request.json();
+      category_id
+    } = body;
 
     if (!name || !price || !category_id) {
       return NextResponse.json(
@@ -77,75 +80,56 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    /* 3️⃣ Load category → restaurant → subscription */
-    const { data: category, error: categoryError } = await supabase
-      .from('menu_categories')
-      .select(`
-        id,
-        restaurant_id,
-        restaurants (
-          subscription_plan
-        )
-      `)
-      .eq('id', category_id)
-      .maybeSingle();
 
-    if (categoryError || !category) {
+    /* Get restaurant id via category */
+    const { data: category } = await supabase
+      .from('menu_categories')
+      .select('restaurant_id, restaurants(subscription_plan)')
+      .eq('id', category_id)
+      .single();
+
+    if (!category) {
       return NextResponse.json(
         { error: 'Category not found' },
         { status: 404 }
       );
     }
 
-    const restaurant = category.restaurants as any;
+    const restaurantId = category.restaurant_id;
+    const plan = (category as any).restaurants.subscription_plan;
 
-    /* 4️⃣ Count total dishes for this restaurant */
-    const { data: allCategories, error: categoriesError } = await supabase
+
+    /* Check subscription limits */
+    const { data: existing } = await supabase
       .from('menu_categories')
       .select('id')
-      .eq('restaurant_id', category.restaurant_id);
+      .eq('restaurant_id', restaurantId);
 
-    if (categoriesError) {
-      return NextResponse.json(
-        { error: categoriesError.message },
-        { status: 400 }
-      );
-    }
+    const categoryIds = (existing ?? []).map(c => c.id);
 
-    const categoryIds = allCategories.map(c => c.id);
-
-    const { data: existingDishes, error: dishesError } = await supabase
+    const { data: dishes } = await supabase
       .from('dishes')
       .select('id')
       .in('category_id', categoryIds);
 
-    if (dishesError) {
+    const dishCount = (dishes ?? []).length;
+
+    const permission = canPerformAction(plan, {
+      type: 'create_dish',
+      currentCount: dishCount
+    });
+
+
+    if (!permission.allowed) {
       return NextResponse.json(
-        { error: dishesError.message },
-        { status: 400 }
-      );
-    }
-
-    const dishCount = existingDishes.length;
-
-    /* 5️⃣ Subscription enforcement */
-    const permissionCheck = canPerformAction(
-      restaurant.subscription_plan,
-      {
-        type: 'create_dish',
-        currentCount: dishCount,
-      }
-    );
-
-    if (!permissionCheck.allowed) {
-      return NextResponse.json(
-        { error: permissionCheck.reason },
+        { error: permission.reason },
         { status: 403 }
       );
     }
 
-    /* 6️⃣ Create dish */
-    const { data: dish, error: insertError } = await supabase
+
+    /* Create dish */
+    const { data: dish, error } = await supabase
       .from('dishes')
       .insert({
         name,
@@ -153,24 +137,45 @@ export async function POST(request: NextRequest) {
         price,
         image_url,
         is_available: is_available ?? true,
-        category_id,
+        category_id
       })
       .select()
       .single();
 
-    if (insertError) {
+
+    if (error) {
       return NextResponse.json(
-        { error: insertError.message },
+        { error: error.message },
         { status: 400 }
       );
     }
 
+
+    /* Increment image count */
+    if (image_url) {
+
+      await supabase.rpc(
+        'adjust_image_count',
+        {
+          rid: restaurantId,
+          delta: 1
+        }
+      );
+
+    }
+
+
     return NextResponse.json({ dish });
-  } catch (error) {
-    console.error('Create dish error:', error);
+
+  }
+  catch (err) {
+
+    console.error(err);
+
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Server error' },
       { status: 500 }
     );
+
   }
 }

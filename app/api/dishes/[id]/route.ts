@@ -2,15 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route';
 import { deleteS3File, extractS3Key } from '@/lib/aws/s3';
 
+
+
+/* =====================================================
+   UPDATE dish
+===================================================== */
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+
   try {
+
     const supabase = createSupabaseRouteClient();
 
     const {
-      data: { user },
+      data: { user }
     } = await supabase.auth.getUser();
 
     if (!user) {
@@ -20,84 +27,166 @@ export async function PUT(
       );
     }
 
+
     const updates = await request.json();
 
-    // 1️⃣ Fetch existing dish image
-    const { data: existingDish, error: fetchError } =
-      await supabase
-        .from('dishes')
-        .select('image_url')
-        .eq('id', params.id)
-        .single();
 
-    if (fetchError) {
+    /* Get existing dish */
+    const { data: existing } = await supabase
+      .from('dishes')
+      .select(`
+        image_url,
+        menu_categories (
+          restaurant_id
+        )
+      `)
+      .eq('id', params.id)
+      .single();
+
+
+    if (!existing) {
       return NextResponse.json(
-        { error: fetchError.message },
-        { status: 400 }
+        { error: 'Dish not found' },
+        { status: 404 }
       );
     }
 
-    // 2️⃣ Normalize incoming image_url
-    const newImageUrl =
-      typeof updates.image_url === 'string' &&
-      updates.image_url.trim() !== ''
+
+    const prevImage = existing.image_url;
+
+    const restaurantId =
+      (existing as any).menu_categories.restaurant_id;
+
+
+    const newImage =
+      updates.image_url && updates.image_url.trim() !== ''
         ? updates.image_url
         : null;
 
-    // 3️⃣ Delete old image ONLY if replaced
+
+
+    /* IMAGE REPLACED */
     if (
-      existingDish?.image_url &&
-      newImageUrl &&
-      existingDish.image_url !== newImageUrl
+      prevImage &&
+      newImage &&
+      prevImage !== newImage
     ) {
-      const oldKey = extractS3Key(existingDish.image_url);
-      if (oldKey) {
-        await deleteS3File(oldKey);
+
+      const key = extractS3Key(prevImage);
+
+      if (key) {
+        await deleteS3File(key);
       }
+
+      /* count unchanged */
+
     }
 
-    // 4️⃣ Prevent empty string overwrite
-    if (!newImageUrl) {
+
+
+    /* IMAGE REMOVED */
+    if (
+      prevImage &&
+      !newImage
+    ) {
+
+      const key = extractS3Key(prevImage);
+
+      if (key) {
+        await deleteS3File(key);
+      }
+
+
+      await supabase.rpc(
+        'adjust_image_count',
+        {
+          rid: restaurantId,
+          delta: -1
+        }
+      );
+
+    }
+
+
+
+    /* IMAGE ADDED */
+    if (
+      !prevImage &&
+      newImage
+    ) {
+
+      await supabase.rpc(
+        'adjust_image_count',
+        {
+          rid: restaurantId,
+          delta: 1
+        }
+      );
+
+    }
+
+
+
+    if (!newImage) {
       delete updates.image_url;
     }
 
-    // 5️⃣ Update dish
+
+
     const { data: dish, error } = await supabase
       .from('dishes')
       .update({
         ...updates,
-        updated_at: new Date().toISOString(),
+        updated_at: new Date()
       })
       .eq('id', params.id)
       .select()
       .single();
 
+
     if (error) {
+
       return NextResponse.json(
         { error: error.message },
         { status: 400 }
       );
+
     }
 
+
+
     return NextResponse.json({ dish });
-  } catch (error) {
-    console.error('Update dish error:', error);
+
+  }
+  catch (err) {
+
+    console.error(err);
+
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Server error' },
       { status: 500 }
     );
+
   }
+
 }
 
+
+
+/* =====================================================
+   DELETE dish
+===================================================== */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+
   try {
+
     const supabase = createSupabaseRouteClient();
 
     const {
-      data: { user },
+      data: { user }
     } = await supabase.auth.getUser();
 
     if (!user) {
@@ -107,50 +196,79 @@ export async function DELETE(
       );
     }
 
-    // 1️⃣ Fetch dish image
-    const { data: dish, error: fetchError } =
-      await supabase
-        .from('dishes')
-        .select('image_url')
-        .eq('id', params.id)
-        .single();
 
-    if (fetchError) {
+    const { data: dish } = await supabase
+      .from('dishes')
+      .select(`
+        image_url,
+        menu_categories (
+          restaurant_id
+        )
+      `)
+      .eq('id', params.id)
+      .single();
+
+
+    if (!dish) {
+
       return NextResponse.json(
-        { error: fetchError.message },
-        { status: 400 }
+        { error: 'Dish not found' },
+        { status: 404 }
       );
+
     }
 
-    // 2️⃣ Delete image from S3 (if exists)
-    if (dish?.image_url) {
-      const key = extractS3Key(dish.image_url);
+
+
+    const imageUrl = dish.image_url;
+
+    const restaurantId =
+      (dish as any).menu_categories.restaurant_id;
+
+
+
+    if (imageUrl) {
+
+      const key = extractS3Key(imageUrl);
+
       if (key) {
         await deleteS3File(key);
       }
+
+
+      await supabase.rpc(
+        'adjust_image_count',
+        {
+          rid: restaurantId,
+          delta: -1
+        }
+      );
+
     }
 
-    // 3️⃣ Delete dish row
-    const { error: deleteError } = await supabase
+
+
+    await supabase
       .from('dishes')
       .delete()
       .eq('id', params.id);
 
-    if (deleteError) {
-      return NextResponse.json(
-        { error: deleteError.message },
-        { status: 400 }
-      );
-    }
+
 
     return NextResponse.json({
-      message: 'Dish deleted successfully',
+      success: true
     });
-  } catch (error) {
-    console.error('Delete dish error:', error);
+
+  }
+  catch (err) {
+
+    console.error(err);
+
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Server error' },
       { status: 500 }
     );
+
   }
+
 }
