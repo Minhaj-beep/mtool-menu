@@ -75,10 +75,15 @@ function ImageModal({
   themeColor: string;
   onClose: () => void;
 }) {
+
   useEffect(() => {
+    // prevent background scroll (better fix for mobile too)
     document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
     };
   }, []);
 
@@ -87,16 +92,19 @@ function ImageModal({
       className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-in fade-in duration-200"
       onClick={onClose}
     >
+      {/* ✅ FIXED: added min-h-0 */}
       <div
-        className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200"
+        className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col min-h-0 shadow-2xl animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative">
+        {/* IMAGE */}
+        <div className="relative flex-shrink-0 rounded-2xl">
           <img
             src={dish.image_url!}
             alt={dish.name}
-            className="w-full max-h-[60vh] object-contain bg-slate-50"
+            className="w-full max-h-[60vh] object-contain bg-slate-50 rounded-2xl"
           />
+
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-lg"
@@ -104,11 +112,14 @@ function ImageModal({
             <X className="w-5 h-5 text-slate-700" />
           </button>
         </div>
-        <div className="p-6 md:p-8">
+
+        {/* ✅ SCROLLABLE CONTENT */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain scroll-smooth p-6 md:p-8">
           <div className="flex justify-between items-start gap-4 mb-3">
             <h3 className="text-2xl md:text-3xl font-bold text-slate-900">
               {dish.name}
             </h3>
+
             <div
               className="inline-flex items-center px-4 py-2 rounded-lg text-2xl md:text-3xl font-bold shadow-sm flex-shrink-0"
               style={{
@@ -119,8 +130,9 @@ function ImageModal({
               ₹{dish.price}
             </div>
           </div>
+
           {dish.description && (
-            <p className="text-slate-600 text-base md:text-lg leading-relaxed">
+            <p className="text-slate-600 text-base md:text-lg leading-relaxed whitespace-pre-line">
               {dish.description}
             </p>
           )}

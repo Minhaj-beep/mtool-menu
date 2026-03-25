@@ -23,6 +23,7 @@ import { Plus, Image as ImageIcon, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PLAN_LIMITS } from '@/lib/subscription/plans';
 import { Skeleton } from '@/components/ui/skeleton';
+import imageCompression from 'browser-image-compression';
 
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
@@ -76,6 +77,7 @@ export default function CategoryDishesPage() {
   // Image file to upload on save + preview URL
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [removingImage, setRemovingImage] = useState(false);
 
   // Loaders for API actions
   const [processingSave, setProcessingSave] = useState(false);
@@ -169,6 +171,10 @@ export default function CategoryDishesPage() {
     e.stopPropagation();
     const file = e.target.files?.[0] ?? null;
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Max file size is 5MB');
+      return;
+    }
     setImageFile(file);
   };
 
@@ -176,23 +182,25 @@ export default function CategoryDishesPage() {
     if (!imageFile || !restaurant) return null;
     if (!PLAN_LIMITS[restaurant.subscription_plan].allowImages) return null;
 
+    // ✅ compress before upload
+    const compressedFile = await compressImage(imageFile);
+
     const presign = await fetch('/api/upload/presigned-url', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        fileName: imageFile.name,
-        fileType: imageFile.type,
+        fileName: compressedFile.name,
+        fileType: compressedFile.type,
       }),
     });
 
     const presignData = await presign.json();
     if (!presign.ok) throw new Error(presignData.error || 'Presign failed');
 
-    // Upload via PUT to storage (S3/GCS style)
     await fetch(presignData.uploadUrl, {
       method: 'PUT',
-      headers: { 'Content-Type': imageFile.type },
-      body: imageFile,
+      headers: { 'Content-Type': compressedFile.type },
+      body: compressedFile, // ✅ upload compressed
     });
 
     return presignData.fileUrl as string;
@@ -338,6 +346,35 @@ export default function CategoryDishesPage() {
   };
 
   /* -------------------------------------------------------------------------- */
+  /*                                 Delete Images                               */
+  /* -------------------------------------------------------------------------- */
+
+  const removeImage = async (dishId: string) => {
+    try {
+      setRemovingImage(true);
+
+      const res = await fetch(`/api/dishes/${dishId}/image`, {
+        method: 'DELETE',
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error);
+
+      // clear UI
+      setImageFile(null);
+      setImagePreviewUrl(null);
+      setNewDish({ ...newDish, image_url: '' });
+
+      toast.success('Image removed');
+
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to remove image');
+    } finally {
+      setRemovingImage(false);
+    }
+  };
+
+  /* -------------------------------------------------------------------------- */
   /*                                 HELPERS                                     */
   /* -------------------------------------------------------------------------- */
 
@@ -354,6 +391,25 @@ export default function CategoryDishesPage() {
       }),
     []
   );
+
+  /* -------------------------------------------------------------------------- */
+  /*                                   COMPRESS IMAGE                            */
+  /* -------------------------------------------------------------------------- */
+  const compressImage = async (file: File): Promise<File> => {
+    const options = {
+      maxSizeMB: 0.5,        // 🔥 compress to ~500KB
+      maxWidthOrHeight: 1280, // 🔥 resize large images
+      useWebWorker: true,
+    };
+
+    try {
+      const compressedFile = await imageCompression(file, options);
+      return compressedFile;
+    } catch (err) {
+      console.error('Compression error:', err);
+      return file; // fallback
+    }
+  };
 
   /* -------------------------------------------------------------------------- */
   /*                                   RENDER                                    */
@@ -531,13 +587,32 @@ export default function CategoryDishesPage() {
 
           <div className="space-y-3 mt-2">
             {(imagePreviewUrl || newDish.image_url) && (
-              <div className="w-full h-48 overflow-hidden rounded-md bg-slate-50">
-                <img
-                  src={imagePreviewUrl ?? newDish.image_url ?? ''}
-                  alt={newDish.name || editingDish?.name || 'Dish image'}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
+              <div className="space-y-2">
+                <div className="w-full h-56 overflow-hidden rounded-md bg-slate-50">
+                  <img
+                    src={imagePreviewUrl ?? newDish.image_url ?? ''}
+                    alt={newDish.name || editingDish?.name || 'Dish image'}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="w-full flex items-center justify-center gap-2"
+                  onClick={() => editingDish && removeImage(editingDish.id)}
+                  disabled={removingImage}
+                >
+                  {removingImage ? (
+                    <>
+                      <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                      Removing...
+                    </>
+                  ) : (
+                    'Remove Image'
+                  )}
+                </Button>
               </div>
             )}
 

@@ -3,10 +3,20 @@ import { getSupabaseServiceRole } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, restaurantName, restaurantSlug } =
-      await request.json();
+    const {
+      email,
+      password,
+      restaurantName,
+      restaurantSlug,
+      googlePlaceId,
+      latitude,
+      longitude,
+      address,
+      city,
+      country
+    } = await request.json();
 
-    if (!email || !password || !restaurantName || !restaurantSlug) {
+    if (!email || !password || !restaurantName || !restaurantSlug || !googlePlaceId) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -61,6 +71,16 @@ export async function POST(request: NextRequest) {
         owner_id: authData.user.id, // ✅ FK → auth.users(id)
         name: restaurantName,
         slug: restaurantSlug,
+
+        google_place_id: googlePlaceId,
+        latitude: latitude || null,
+        longitude: longitude || null,
+        address: address || null,
+        city: city || null,
+        country: country || null,
+
+        location: `POINT(${longitude} ${latitude})`,
+        
         subscription_plan: 'free',
         subscription_status: 'active',
       })

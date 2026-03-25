@@ -398,7 +398,9 @@ export default function HomePage() {
 
       {/* FOOTER */}
       <footer className="border-t border-slate-200 bg-slate-50/50 py-10 sm:py-12 text-center">
-        <p className="text-sm sm:text-base text-slate-600">&copy; 2024 mtoool menu. All rights reserved.</p>
+        <p className="text-sm sm:text-base text-slate-600">
+          &copy; {new Date().getFullYear()} mtoool menu. All rights reserved.
+        </p>
       </footer>
     </div>
   );
