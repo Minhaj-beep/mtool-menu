@@ -577,7 +577,7 @@ export default function CategoryDishesPage() {
       {/* Dish add/edit dialog — DO NOT override positioning (DialogContent already handles portal + centering).
           Only pass size/visual classes (width/padding) here. */}
       <Dialog open={dishDialogOpen} onOpenChange={setDishDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-lg p-4">
+        <DialogContent className="w-[95vw] max-w-lg p-4 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingDish ? 'Edit Item' : 'Add Item'}</DialogTitle>
             <DialogDescription>
