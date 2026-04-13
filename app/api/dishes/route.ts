@@ -230,6 +230,7 @@ export async function POST(request: NextRequest) {
     ============================== */
 
     if (hasImage) {
+      console.log("Has image count: ", hasImage)
       const { error: rpcError } = await supabase.rpc(
         'adjust_image_count',
         {
