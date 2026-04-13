@@ -19,15 +19,22 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import { Restaurant } from '@/lib/types/database';
-import { Plus, Image as ImageIcon, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Image as ImageIcon, Pencil, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { PLAN_LIMITS } from '@/lib/subscription/plans';
 import { Skeleton } from '@/components/ui/skeleton';
 import imageCompression from 'browser-image-compression';
+import { DialogClose } from '@radix-ui/react-dialog';
 
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
 /* -------------------------------------------------------------------------- */
+
+type Dish_variants = {
+  id: string | null;
+  name: string;
+  price: number
+}
 
 type Dish = {
   id: string;
@@ -36,6 +43,7 @@ type Dish = {
   price: number;
   image_url: string | null;
   is_available: boolean;
+  dish_variants: Dish_variants[]
 };
 
 type MenuCategory = {
@@ -43,6 +51,11 @@ type MenuCategory = {
   name: string;
   is_active: boolean;
   dishes: Dish[];
+};
+
+type VariantForm = {
+  name: string;
+  price: string; // string for input
 };
 
 /* -------------------------------------------------------------------------- */
@@ -72,6 +85,7 @@ export default function CategoryDishesPage() {
     price: '',
     image_url: '',
     is_available: true,
+    variants: [{ name: '', price: '' }]
   });
 
   // Image file to upload on save + preview URL
@@ -86,6 +100,11 @@ export default function CategoryDishesPage() {
 
   // Local optimistic state to reduce full reloads
   const [localCategory, setLocalCategory] = useState<MenuCategory | null>(null);
+
+  const [hasVariants, setHasVariants] = useState(false);
+  const [variants, setVariants] = useState<VariantForm[]>([
+    { name: '', price: '' }
+  ]);
 
   /* -------------------------------------------------------------------------- */
   /*                                   LOAD                                     */
@@ -132,7 +151,12 @@ export default function CategoryDishesPage() {
             description,
             price,
             image_url,
-            is_available
+            is_available,
+            dish_variants (
+              id,
+              name,
+              price
+            )
           )
         `)
         .eq('id', categoryId)
@@ -211,8 +235,12 @@ export default function CategoryDishesPage() {
   /* -------------------------------------------------------------------------- */
 
   const saveDish = async () => {
-    if (!newDish.name || !newDish.price) {
-      toast.error('Dish name and price are required');
+    if (
+      !newDish.name ||
+      (!hasVariants && !newDish.price) ||
+      (hasVariants && variants.length === 0)
+    ) {
+      toast.error('Please add name and price or variants');
       return;
     }
 
@@ -229,10 +257,16 @@ export default function CategoryDishesPage() {
       const payload = {
         name: newDish.name,
         description: newDish.description || null,
-        price: Number(newDish.price),
+        price: hasVariants ? 0 : Number(newDish.price),
         image_url: imageUrl,
         is_available: newDish.is_available,
         category_id: categoryId,
+        variants: hasVariants
+        ? variants.map(v => ({
+            name: v.name,
+            price: Number(v.price)
+          }))
+        : null,
       };
 
       const method = editingDish ? 'PUT' : 'POST';
@@ -263,6 +297,9 @@ export default function CategoryDishesPage() {
         price: '',
         image_url: '',
         is_available: true,
+        variants: [
+          { name: '', price: '' }
+        ]
       });
     } catch (e: any) {
       toast.error(e?.message || 'Save failed');
@@ -342,6 +379,12 @@ export default function CategoryDishesPage() {
       toast.error(e?.message || 'Delete failed');
     } finally {
       setDeletingId(null);
+      setDishDialogOpen(false);
+      setEditingDish(null);
+      setImageFile(null);
+      setImagePreviewUrl(null);
+      setVariants([])
+      setHasVariants(false)
     }
   };
 
@@ -465,6 +508,7 @@ export default function CategoryDishesPage() {
                 price: '',
                 image_url: '',
                 is_available: true,
+                variants: []
               });
               setDishDialogOpen(true);
             }}
@@ -519,7 +563,19 @@ export default function CategoryDishesPage() {
 
                     <div className="mt-2 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-3">
-                        <div className="text-sm font-semibold">{currencyFormatter.format(dish.price)}</div>
+                        <div className="text-sm font-semibold">
+                          {dish.dish_variants?.length > 0 ? (
+                            <div className="flex flex-col">
+                              {dish.dish_variants.map((v) => (
+                                <span key={v.id}>
+                                  {v.name} - {currencyFormatter.format(v.price)}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            currencyFormatter.format(dish.price)
+                          )}
+                        </div>
 
                         <Badge variant="outline" className="text-xs">
                           {dish.is_available ? 'Available' : 'Unavailable'}
@@ -547,7 +603,22 @@ export default function CategoryDishesPage() {
                               price: dish.price.toString(),
                               image_url: dish.image_url ?? '',
                               is_available: dish.is_available,
+                              variants: dish.dish_variants.map(v => ({
+                                name: v.name,
+                                price: v.price.toString()
+                              }))
                             });
+                            if (dish.dish_variants.length > 0) {
+                              setHasVariants(true)
+                              setVariants(dish.dish_variants.map(v => ({
+                                name: v.name,
+                                price: v.price.toString()
+                              })))
+                            } else {
+                              setHasVariants(false)
+                              setVariants([])
+                            }
+                            
                             setDishDialogOpen(true);
                           }}
                           aria-label={`Edit ${dish.name}`}
@@ -578,6 +649,19 @@ export default function CategoryDishesPage() {
           Only pass size/visual classes (width/padding) here. */}
       <Dialog open={dishDialogOpen} onOpenChange={setDishDialogOpen}>
         <DialogContent className="w-[95vw] max-w-lg p-4 max-h-[60vh] overflow-y-auto">
+          <DialogClose asChild>
+            <button onClick={() => {
+              setDishDialogOpen(false);
+              setEditingDish(null);
+              setImageFile(null);
+              setImagePreviewUrl(null);
+              setVariants([])
+              setHasVariants(false)
+            }} className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100">
+              <X className="w-4 h-4" />
+            </button>
+          </DialogClose>
+
           <DialogHeader>
             <DialogTitle>{editingDish ? 'Edit Item' : 'Add Item'}</DialogTitle>
             <DialogDescription>
@@ -630,18 +714,75 @@ export default function CategoryDishesPage() {
               aria-label="Dish description"
             />
 
-            <Input
-              type="number"
-              placeholder="Price (e.g. 199)"
-              value={newDish.price}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (/^\d*\.?\d*$/.test(val)) {
-                  setNewDish({ ...newDish, price: val });
-                }
-              }}
-              aria-label="Price"
-            />
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={hasVariants}
+                onCheckedChange={setHasVariants}
+                aria-label="Has variants"
+              />
+              <span className="text-sm text-slate-600">Multiple prices</span>
+            </div>
+
+
+            {
+              hasVariants ? 
+                <div>
+                  {
+                    variants.map((v, i) => (
+                      <div key={i} className="flex mt-2 gap-2 items-center">
+                        <Input
+                          placeholder="Variant (Half, Full)"
+                          value={v.name}
+                          onChange={(e) => {
+                            const copy = [...variants];
+                            copy[i].name = e.target.value;
+                            setVariants(copy);
+                          }}
+                        />
+                        <Input
+                          type="number"
+                          placeholder="Price"
+                          value={v.price}
+                          onChange={(e) => {
+                            const copy = [...variants];
+                            copy[i].price = e.target.value;
+                            setVariants(copy);
+                          }}
+                        />
+
+                        {/* ❌ Remove Button */}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            const updated = variants.filter((_, index) => index !== i);
+                            setVariants(updated);
+                          }}
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                    ))
+                  }
+                  <Button className='mt-2' onClick={() => setVariants([...variants, { name: '', price: '' }])}>
+                    + Add Variant
+                  </Button>
+                </div>
+                :
+                <Input
+                  type="number"
+                  placeholder="Price (e.g. 199)"
+                  value={newDish.price}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (/^\d*\.?\d*$/.test(val)) {
+                      setNewDish({ ...newDish, price: val });
+                    }
+                  }}
+                  aria-label="Price"
+                />
+            }
 
             {restaurant && PLAN_LIMITS[restaurant.subscription_plan].allowImages && (
               <div className="space-y-2">
@@ -675,6 +816,8 @@ export default function CategoryDishesPage() {
                   setEditingDish(null);
                   setImageFile(null);
                   setImagePreviewUrl(null);
+                  setVariants([])
+                  setHasVariants(false)
                 }}
                 className="w-full"
               >

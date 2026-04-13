@@ -22,6 +22,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 
+type Dish_variants= {
+  id: string;
+  name: string;
+  price: number;
+}
+
 type PublicMenuItem = {
   id: string;
   name: string;
@@ -29,6 +35,7 @@ type PublicMenuItem = {
   price: number;
   image_url: string | null;
   is_available: boolean;
+  dish_variants: Dish_variants[]
 };
 
 type PublicMenuCategory = {
@@ -120,14 +127,24 @@ function ImageModal({
               {dish.name}
             </h3>
 
-            <div
-              className="inline-flex items-center px-4 py-2 rounded-lg text-2xl md:text-3xl font-bold shadow-sm flex-shrink-0"
-              style={{
-                backgroundColor: `${themeColor}15`,
-                color: themeColor,
-              }}
-            >
-              ₹{dish.price}
+            <div className="flex flex-col items-end gap-1">
+              {dish.dish_variants?.length > 0 ? (
+                <>
+                  <div className="text-xs text-slate-500">Available Variants</div>
+                  {dish.dish_variants.map((v) => (
+                    <div key={v.id} className="text-lg font-semibold" style={{ color: themeColor }}>
+                      {v.name} — ₹{v.price}
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <div
+                  className="text-2xl md:text-3xl font-bold"
+                  style={{ color: themeColor }}
+                >
+                  ₹{dish.price}
+                </div>
+              )}
             </div>
           </div>
 
@@ -159,7 +176,12 @@ function DishBadges({
     badges.push({ text: "Popular", icon: TrendingUp, color: "bg-blue-500" });
   }
 
-  if (hasImage && dish.price > 200) {
+  const maxPrice =
+    dish.dish_variants?.length > 0
+      ? Math.max(...dish.dish_variants.map(v => v.price))
+      : dish.price;
+
+  if (hasImage && maxPrice > 200) {
     badges.push({ text: "Premium", icon: Sparkles, color: "bg-purple-500" });
   }
 
@@ -297,7 +319,12 @@ export default function PublicMenuPage() {
             description,
             price,
             image_url,
-            is_available
+            is_available,
+            dish_variants (
+              id,
+              name,
+              price
+            )
           )
         `)
         .eq('restaurant_id', restaurant.id)
@@ -310,13 +337,14 @@ export default function PublicMenuPage() {
       }
 
       const formatted: PublicMenuCategory[] =
-        data?.map((category) => ({
-          ...category,
-          dishes:
-            category.dishes?.filter(
-              (item) => item.is_available
-            ) ?? [],
-        })) ?? [];
+      data?.map((category) => ({
+        ...category,
+        dishes:
+          category.dishes?.map((item) => ({
+            ...item,
+            dish_variants: item.dish_variants ?? []  // 🔥 FIX
+          })).filter((item) => item.is_available) ?? [],
+      })) ?? [];
 
       setCategories(formatted);
     } catch (err) {
@@ -627,13 +655,23 @@ export default function PublicMenuPage() {
                           </p>
                         )}
                         <div
-                          className="inline-flex items-center px-3 py-1.5 rounded-lg text-lg font-bold"
+                          className="inline-flex flex-col items-start px-3 py-1.5 rounded-lg text-sm font-semibold"
                           style={{
                             backgroundColor: `${restaurant.theme_color}15`,
                             color: restaurant.theme_color,
                           }}
                         >
-                          ₹{dish.price}
+                          {dish.dish_variants?.length > 0 ? (
+                            dish.dish_variants.map((v) => (
+                              <span key={v.id}>
+                                {v.name} — ₹{v.price}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-lg font-bold">
+                              ₹{dish.price}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -770,13 +808,23 @@ export default function PublicMenuPage() {
                                       </div>
                                       <div className="flex-shrink-0">
                                         <div
-                                          className="inline-flex items-center px-4 py-2 rounded-lg text-xl md:text-2xl font-bold shadow-sm"
+                                          className="inline-flex flex-col items-start px-4 py-2 rounded-lg text-sm md:text-base font-semibold shadow-sm gap-0.5"
                                           style={{
                                             backgroundColor: `${restaurant.theme_color}15`,
                                             color: restaurant.theme_color,
                                           }}
                                         >
-                                          ₹{item.price}
+                                          {item.dish_variants?.length > 0 ? (
+                                            item.dish_variants.map((v) => (
+                                              <span key={v.id} className="leading-tight">
+                                                {v.name} — ₹{v.price}
+                                              </span>
+                                            ))
+                                          ) : (
+                                            <span className="text-xl md:text-2xl font-bold">
+                                              ₹{item.price}
+                                            </span>
+                                          )}
                                         </div>
                                       </div>
                                     </div>
