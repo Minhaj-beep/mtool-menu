@@ -61,7 +61,12 @@ export async function POST(request: NextRequest) {
     }
 
     /* 2️⃣ Parse body */
-    const { name, restaurant_id, display_order } = await request.json();
+    const {
+      name,
+      restaurant_id,
+      display_order,
+      parent_category_id,
+    } = await request.json();
 
     if (!name || !restaurant_id) {
       return NextResponse.json(
@@ -122,6 +127,7 @@ export async function POST(request: NextRequest) {
         name,
         restaurant_id,
         display_order: display_order ?? 0,
+        parent_category_id: parent_category_id ?? null,
         is_active: true,
       })
       .select()
