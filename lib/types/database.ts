@@ -6,6 +6,29 @@ export type SubscriptionStatus =
   | 'expired'
   | 'canceled';
 
+// 🎨 Theming
+export type ThemePreset =
+  | 'minimal'
+  | 'modern'
+  | 'luxury'
+  | 'coffee'
+  | 'elegant'
+  | 'dark'
+  | 'custom';
+
+export type ButtonStyle = 'rounded' | 'pill' | 'square';
+export type CardStyle = 'shadow' | 'flat' | 'outlined' | 'glass';
+export type MenuLayout = 'grid' | 'list' | 'compact';
+
+export type FontFamilyOption =
+  | 'Inter'
+  | 'Poppins'
+  | 'Roboto'
+  | 'Montserrat'
+  | 'Open Sans'
+  | 'Lato'
+  | 'Nunito'
+  | 'Playfair Display';
 
 export interface Restaurant {
   id: string;
@@ -15,12 +38,24 @@ export interface Restaurant {
   logo_url: string | null;
   theme_color: string;
 
+  // 🎨 Branding / theming (see lib/theme/theme-engine.ts)
+  secondary_theme_color: string | null;
+  font_family: FontFamilyOption | string | null;
+  banner_image_url: string | null;
+  background_image_url: string | null;
+  button_style: ButtonStyle | null;
+  card_style: CardStyle | null;
+  menu_layout: MenuLayout | null;
+  dark_mode: boolean | null;
+  theme_preset: ThemePreset | null;
+
   // 🔑 Subscription
   subscription_plan: SubscriptionPlan;
   subscription_cycle: BillingCycle;
   subscription_status: SubscriptionStatus;
   subscription_started_at: string | null;
   subscription_expires_at: string | null;
+  is_on_hold?: boolean | null;
 
   // 💳 Payments
   stripe_customer_id: string | null;

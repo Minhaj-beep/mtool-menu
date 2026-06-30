@@ -29,7 +29,7 @@ export default function SettingsPage() {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -37,7 +37,16 @@ export default function SettingsPage() {
     name: '',
     google_place_id: '',
     theme_color: '#000000',
+    secondary_theme_color: '#ffffff',
+    font_family: 'Inter',
     logo_url: '',
+    banner_image_url: '',
+    background_image_url: '',
+    button_style: 'rounded',
+    card_style: 'shadow',
+    menu_layout: 'grid',
+    dark_mode: false,
+    theme_preset: 'custom',
   });
 
   /* ================= Load ================= */
@@ -69,7 +78,18 @@ export default function SettingsPage() {
         name: data.name,
         google_place_id: data.google_place_id ?? '',
         theme_color: data.theme_color ?? '#000000',
+        secondary_theme_color:
+          data.secondary_theme_color ?? '#ffffff',
+        font_family: data.font_family ?? 'Inter',
         logo_url: data.logo_url ?? '',
+        banner_image_url: data.banner_image_url ?? '',
+        background_image_url:
+          data.background_image_url ?? '',
+        button_style: data.button_style ?? 'rounded',
+        card_style: data.card_style ?? 'shadow',
+        menu_layout: data.menu_layout ?? 'grid',
+        dark_mode: data.dark_mode ?? false,
+        theme_preset: data.theme_preset ?? 'custom',
       });
     } catch (err: any) {
       toast.error(err.message || 'Failed to load restaurant');
@@ -80,8 +100,9 @@ export default function SettingsPage() {
 
   /* ================= Logo Upload ================= */
 
-  const handleLogoUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>
+  const handleImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: 'logo_url' | 'banner_image_url' | 'background_image_url'
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -96,53 +117,43 @@ export default function SettingsPage() {
       return;
     }
 
-    setUploadingLogo(true);
+    setUploadingImage(true);
 
     try {
-      const presignedResponse =
-        await fetch('/api/upload/presigned-url', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            fileName: file.name,
-            fileType: file.type,
-          }),
-        });
+      const presignedResponse = await fetch('/api/upload/presigned-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileType: file.type,
+        }),
+      });
 
-      const presignedData =
-        await presignedResponse.json();
+      const presignedData = await presignedResponse.json();
 
-      if (!presignedResponse.ok)
-        throw new Error(presignedData.error);
+      if (!presignedResponse.ok) throw new Error(presignedData.error);
 
-      const uploadResponse = await fetch(
-        presignedData.uploadUrl,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': file.type,
-          },
-          body: file,
-        }
-      );
+      const uploadResponse = await fetch(presignedData.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      });
 
-      if (!uploadResponse.ok)
-        throw new Error('Upload failed');
+      if (!uploadResponse.ok) throw new Error('Upload failed');
 
       setFormData((prev) => ({
         ...prev,
-        logo_url: presignedData.fileUrl,
+        [field]: presignedData.fileUrl,
       }));
 
-      toast.success('Logo uploaded');
+      toast.success('Image uploaded');
     } catch (err: any) {
       toast.error(err.message);
     } finally {
-      setUploadingLogo(false);
+      setUploadingImage(false);
     }
   };
+
 
   const handleRemoveLogo = () => {
     setFormData((prev) => ({
@@ -264,7 +275,7 @@ export default function SettingsPage() {
                   ref={fileInputRef}
                   type="file"
                   className="hidden"
-                  onChange={handleLogoUpload}
+                  onChange={(e) => handleImageUpload(e, 'logo_url')}
                 />
 
                 <Button
@@ -278,6 +289,45 @@ export default function SettingsPage() {
                 </Button>
               </>
             )}
+          </div>
+
+
+          {/* Banner Image */}
+          <div className="space-y-2">
+            <Label>Banner Image</Label>
+
+            {formData.banner_image_url && (
+              <img
+                src={formData.banner_image_url}
+                className="w-full h-40 object-cover rounded-lg border"
+                alt="Banner"
+              />
+            )}
+
+            <Input
+              type="file"
+              accept="image/*"
+              onChange={(e)=>handleImageUpload(e,'banner_image_url')}
+            />
+          </div>
+
+          {/* Background Image */}
+          <div className="space-y-2">
+            <Label>Background Image</Label>
+
+            {formData.background_image_url && (
+              <img
+                src={formData.background_image_url}
+                className="w-full h-40 object-cover rounded-lg border"
+                alt="Background"
+              />
+            )}
+
+            <Input
+              type="file"
+              accept="image/*"
+              onChange={(e)=>handleImageUpload(e,'background_image_url')}
+            />
           </div>
 
           {/* URL Slug */}
@@ -365,6 +415,34 @@ export default function SettingsPage() {
 
           </div>
 
+          {/* Theme Preset */}
+          <div className="space-y-2">
+            <Label>Theme Preset</Label>
+
+            <select
+              className="w-full border rounded-md h-10 px-3"
+              value={formData.theme_preset}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  theme_preset: e.target.value,
+                })
+              }
+            >
+              <option value="custom">Custom</option>
+              <option value="minimal">Minimal</option>
+              <option value="modern">Modern</option>
+              <option value="luxury">Luxury</option>
+              <option value="coffee">Coffee</option>
+              <option value="elegant">Elegant</option>
+              <option value="dark">Dark</option>
+            </select>
+
+            <p className="text-sm text-muted-foreground">
+              Choose a professionally designed theme. You can still customize colors, fonts and layout afterward.
+            </p>
+          </div>
+
           {/* Theme Color */}
           <div className="space-y-2">
             <Label>Theme Color</Label>
@@ -394,6 +472,137 @@ export default function SettingsPage() {
                 }
               />
             </div>
+          </div>
+          
+          {/* Secondary Theme Color */}
+          <div className="space-y-2">
+            <Label>Secondary Theme Color</Label>
+
+            <div className="flex gap-2">
+              <Input
+                type="color"
+                value={formData.secondary_theme_color}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    secondary_theme_color: e.target.value,
+                  })
+                }
+                className="w-20"
+              />
+
+              <Input
+                value={formData.secondary_theme_color}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    secondary_theme_color: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+          
+          {/* Font Family */}
+          <div className="space-y-2">
+            <Label>Font</Label>
+
+            <select
+              className="w-full border rounded-md h-10 px-3"
+              value={formData.font_family}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  font_family: e.target.value,
+                })
+              }
+            >
+              <option>Inter</option>
+              <option>Poppins</option>
+              <option>Roboto</option>
+              <option>Montserrat</option>
+              <option>Open Sans</option>
+              <option>Lato</option>
+              <option>Nunito</option>
+              <option>Playfair Display</option>
+            </select>
+          </div>
+
+          {/* Button Style */}
+          <div className="space-y-2">
+            <Label>Button Style</Label>
+
+            <select
+              className="w-full border rounded-md h-10 px-3"
+              value={formData.button_style}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  button_style: e.target.value,
+                })
+              }
+            >
+              <option value="rounded">Rounded</option>
+              <option value="pill">Pill</option>
+              <option value="square">Square</option>
+            </select>
+          </div>
+
+          {/* Card Style */}
+          <div className="space-y-2">
+            <Label>Card Style</Label>
+
+            <select
+              className="w-full border rounded-md h-10 px-3"
+              value={formData.card_style}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  card_style: e.target.value,
+                })
+              }
+            >
+              <option value="shadow">Shadow</option>
+              <option value="flat">Flat</option>
+              <option value="outlined">Outlined</option>
+              <option value="glass">Glass</option>
+            </select>
+          </div>
+
+          {/* Menu Layout */}
+          <div className="space-y-2">
+            <Label>Menu Layout</Label>
+
+            <select
+              className="w-full border rounded-md h-10 px-3"
+              value={formData.menu_layout}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  menu_layout: e.target.value,
+                })
+              }
+            >
+              <option value="grid">Grid</option>
+              <option value="list">List</option>
+              <option value="compact">Compact</option>
+            </select>
+          </div>
+
+          {/* Dark Mode */}
+          <div className="flex items-center justify-between">
+            <Label>Dark Mode</Label>
+
+            <input
+              type="checkbox"
+              checked={formData.dark_mode}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  dark_mode: e.target.checked,
+                })
+              }
+            />
           </div>
 
           {/* Save */}
