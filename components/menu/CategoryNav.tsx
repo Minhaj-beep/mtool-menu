@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import type { PublicMenuCategory } from './types';
 import type { RestaurantTheme } from '@/lib/theme/theme-engine';
@@ -16,6 +17,22 @@ export function CategoryNav({
   onSelect: (id: string) => void;
   theme: RestaurantTheme;
 }) {
+  const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  useEffect(() => {
+    if (!activeCategory) return;
+
+    const activeButton = buttonRefs.current[activeCategory];
+
+    if (activeButton) {
+      activeButton.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      });
+    }
+  }, [activeCategory]);
+
   if (categories.length <= 1) return null;
 
   return (
@@ -29,25 +46,41 @@ export function CategoryNav({
       <div className="flex gap-2 overflow-x-auto scrollbar-hide">
         {categories.map((category) => {
           const isActive = activeCategory === category.id;
+
           return (
             <button
               key={category.id}
+              ref={(element) => {
+                buttonRefs.current[category.id] = element;
+              }}
               onClick={() => onSelect(category.id)}
               className="relative px-4 py-2 whitespace-nowrap text-sm font-medium transition-colors flex-shrink-0"
               style={{
                 borderRadius: theme.radius.pill,
-                color: isActive ? theme.colors.primaryText : theme.colors.textSecondary,
+                color: isActive
+                  ? theme.colors.primaryText
+                  : theme.colors.textSecondary,
               }}
             >
               {isActive && (
                 <motion.span
                   layoutId="category-nav-active"
                   className="absolute inset-0"
-                  style={{ backgroundColor: theme.colors.primary, borderRadius: theme.radius.pill }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  style={{
+                    backgroundColor: theme.colors.primary,
+                    borderRadius: theme.radius.pill,
+                  }}
+                  transition={{
+                    type: 'spring',
+                    stiffness: 400,
+                    damping: 30,
+                  }}
                 />
               )}
-              <span className="relative z-10">{category.name}</span>
+
+              <span className="relative z-10">
+                {category.name}
+              </span>
             </button>
           );
         })}
