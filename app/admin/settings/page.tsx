@@ -312,7 +312,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Background Image */}
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label>Background Image</Label>
 
             {formData.background_image_url && (
@@ -328,7 +328,7 @@ export default function SettingsPage() {
               accept="image/*"
               onChange={(e)=>handleImageUpload(e,'background_image_url')}
             />
-          </div>
+          </div> */}
 
           {/* URL Slug */}
           <div className="space-y-2">

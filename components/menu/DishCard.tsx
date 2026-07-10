@@ -61,6 +61,7 @@ export function DishCard({
       <div
         className="overflow-hidden transition-all duration-300 hover:-translate-y-1 group"
         style={cardSurface}
+        onClick={() => onSelect(item)}
       >
         {hasImage ? (
           <button onClick={() => onSelect(item)} className="block relative w-full aspect-[4/3] overflow-hidden">
@@ -92,7 +93,7 @@ export function DishCard({
   if (layout === 'compact') {
     return (
       <button
-        onClick={() => hasImage && onSelect(item)}
+        onClick={() => onSelect(item)}
         className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors"
         style={{ borderBottom: `1px solid ${theme.colors.border}` }}
       >
@@ -116,7 +117,7 @@ export function DishCard({
   // list (default)
   return (
     <div className="px-6 py-5 md:px-8 md:py-6 transition-colors duration-200">
-      <div className="flex gap-4 md:gap-6">
+      <div className="flex gap-4 md:gap-6" onClick={() => onSelect(item)}>
         {hasImage && (
           <div className="flex-shrink-0">
             <button
