@@ -76,6 +76,13 @@ export default function HomePage() {
   const [billingCycle, setBillingCycle] =
     useState<BillingCycle>('monthly');
   const [loadingPlans, setLoadingPlans] = useState(true);
+  const [contact, setContact] = useState({
+    name: '',
+    email: '',
+    mobile: '',
+    subject: '',
+    message: '',
+  });
 
   useEffect(() => {
     const loadPlans = async () => {
@@ -96,6 +103,25 @@ export default function HomePage() {
     (p) => p.billing_cycle === billingCycle
   );
 
+  const handleContactSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const body = `
+  Name: ${contact.name}
+  Email: ${contact.email}
+  Mobile: ${contact.mobile}
+
+  Message:
+  ${contact.message}
+  `;
+
+    const mailto = `mailto:bitbygeek@gmail.com?subject=${encodeURIComponent(
+      contact.subject || 'Website Enquiry'
+    )}&body=${encodeURIComponent(body)}`;
+
+    window.location.href = mailto;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
       {/* NAV */}
@@ -112,7 +138,8 @@ export default function HomePage() {
             <Link href="/login">
               <Button variant="ghost" className="hover:bg-slate-100 transition-colors">Sign In</Button>
             </Link>
-            <Link href="/signup">
+            {/* <Link href="/signup"> */}
+            <Link href="#contact">
               <Button className="shadow-sm hover:shadow-md transition-all hover:scale-105">Get Started</Button>
             </Link>
           </div>
@@ -135,7 +162,8 @@ export default function HomePage() {
             Create beautiful QR-based menus for your restaurant.
             Update instantly. No apps for customers.
           </p>
-          <Link href="/signup">
+          <Link href="#contact">
+          {/* <Link href="/signup"> */}
             <Button size="lg" className="h-12 sm:h-14 px-8 sm:px-10 text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-105">
               Start Free <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
@@ -286,7 +314,7 @@ export default function HomePage() {
       </div>
 
       {/* PRICING */}
-      <section className="py-20 sm:py-28 lg:py-32 px-4">
+      {/* <section className="py-20 sm:py-28 lg:py-32 px-4">
         <div className="max-w-3xl mx-auto text-center mb-12 sm:mb-16">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-4 tracking-tight">
             Simple Pricing
@@ -294,7 +322,6 @@ export default function HomePage() {
           <p className="text-base sm:text-lg text-slate-600">Choose the perfect plan for your restaurant</p>
         </div>
 
-        {/* Toggle */}
         <div className="flex justify-center mb-12 sm:mb-16">
           <div className="bg-slate-100/80 p-1.5 rounded-2xl flex shadow-inner">
             {(['monthly', 'yearly'] as BillingCycle[]).map(
@@ -394,6 +421,85 @@ export default function HomePage() {
             })}
           </div>
         )}
+      </section> */}
+
+      {/* CONTACT */}
+      <section id='contact' className="py-20 px-4 bg-white border-t border-slate-200">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-10">
+            <h2 className="text-4xl font-bold text-slate-900">
+              Contact Us
+            </h2>
+            <p className="mt-3 text-slate-600">
+              Have questions or need help setting up your digital menu? Send us an enquiry.
+            </p>
+          </div>
+
+          <form
+            onSubmit={handleContactSubmit}
+            className="space-y-5 bg-slate-50 p-8 rounded-2xl shadow-sm"
+          >
+            <input
+              type="text"
+              placeholder="Your Name"
+              value={contact.name}
+              onChange={(e) =>
+                setContact({ ...contact, name: e.target.value })
+              }
+              required
+              className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-900"
+            />
+
+            <input
+              type="email"
+              placeholder="Your Email"
+              value={contact.email}
+              onChange={(e) =>
+                setContact({ ...contact, email: e.target.value })
+              }
+              required
+              className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-900"
+            />
+
+            <input
+              type="tel"
+              placeholder="Mobile Number"
+              value={contact.mobile}
+              onChange={(e) =>
+                setContact({ ...contact, mobile: e.target.value })
+              }
+              required
+              pattern="[0-9+\-\s()]{8,20}"
+              className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-900"
+            />
+
+            <input
+              type="text"
+              placeholder="Subject"
+              value={contact.subject}
+              onChange={(e) =>
+                setContact({ ...contact, subject: e.target.value })
+              }
+              required
+              className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-900"
+            />
+
+            <textarea
+              rows={6}
+              placeholder="Your Message"
+              value={contact.message}
+              onChange={(e) =>
+                setContact({ ...contact, message: e.target.value })
+              }
+              required
+              className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-900"
+            />
+
+            <Button type="submit" className="w-full h-12 text-lg">
+              Send Enquiry
+            </Button>
+          </form>
+        </div>
       </section>
 
       {/* FOOTER */}

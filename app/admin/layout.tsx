@@ -71,7 +71,7 @@ export default function AdminLayout({
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Menus', href: '/admin/menus', icon: MenuSquare },
     { name: 'QR Code', href: '/admin/qr-code', icon: QrCode },
-    { name: 'Subscription', href: '/admin/subscription', icon: CreditCard },
+    // { name: 'Subscription', href: '/admin/subscription', icon: CreditCard },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
 
