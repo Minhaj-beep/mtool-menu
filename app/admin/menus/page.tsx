@@ -53,7 +53,7 @@ import {
 
 import { toast } from 'sonner';
 
-// import { ImportMenuModal } from '@/components/menu/ImportMenuModal';
+import { ImportMenuModal } from '@/components/menu/ImportMenuModal';
 
 /* -------------------------------------------------------------------------- */
 /* TYPES */
@@ -533,12 +533,12 @@ export default function MenuCategoriesPage() {
       </Dialog>
 
       {/* IMPORT MODAL */}
-      {/* <ImportMenuModal
+      <ImportMenuModal
         open={importOpen}
         onOpenChange={setImportOpen}
         restaurantId={restaurantId}
         onImported={loadCategories}
-      /> */}
+      />
     </div>
   );
 }
