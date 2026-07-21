@@ -13,9 +13,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Upload, Download, FileSpreadsheet, FileText, CircleAlert as AlertCircle, CircleCheck as CheckCircle2, Loader as Loader2 } from 'lucide-react';
+import { Upload, Download, FileText, CircleAlert as AlertCircle, CircleCheck as CheckCircle2, Loader as Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
 
 /* -------------------------------------------------------------------------- */
 /* TYPES                                                                       */
@@ -134,78 +134,86 @@ export function ImportMenuModal({
     setFile(selected);
     setStatus('parsing');
 
-    try {
-      const data = await selected.arrayBuffer();
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
-        defval: null,
-      });
+    Papa.parse<Record<string, unknown>>(selected, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (header) => header.toLowerCase().trim(),
+      complete: (results) => {
+        try {
+          const json = results.data;
 
-      if (json.length === 0) {
-        setValidationErrors([
-          { row: 0, message: 'The file contains no data rows.' },
-        ]);
+          if (!json || json.length === 0) {
+            setValidationErrors([
+              { row: 0, message: 'The file contains no data rows.' },
+            ]);
+            setStatus('error');
+            return;
+          }
+
+          // Validate headers
+          const headers = results.meta.fields?.map((h) => h.toLowerCase().trim()) || [];
+          const missing = REQUIRED_COLUMNS.filter(
+            (c) => !headers.includes(c)
+          );
+
+          if (missing.length > 0) {
+            setValidationErrors([
+              {
+                row: 0,
+                message: `Missing required columns: ${missing.join(', ')}. Please download the sample file for the correct format.`,
+              },
+            ]);
+            setStatus('error');
+            return;
+          }
+
+          // Map rows
+          const rows: ParsedRow[] = json.map((r) => {
+            const get = (key: string): string | null => {
+              const val = r[key];
+              if (val === null || val === undefined) return null;
+              const strVal = String(val).trim();
+              return strVal === '' ? null : strVal;
+            };
+
+            return {
+              category_name: get('category_name') ?? '',
+              subcategory_name: get('subcategory_name'),
+              dish_name: get('dish_name') ?? '',
+              dish_description: get('dish_description'),
+              dish_price: get('dish_price'),
+              dish_is_available: get('dish_is_available'),
+              variant_name: get('variant_name'),
+              variant_price: get('variant_price'),
+            };
+          });
+
+          setParsedRows(rows);
+          setStatus('validating');
+          setProgress(30);
+
+          // Client-side pre-validation (server is source of truth)
+          const errors = validateClient(rows);
+          if (errors.length > 0) {
+            setValidationErrors(errors);
+            setStatus('error');
+            setProgress(0);
+          } else {
+            setProgress(50);
+            setStatus('idle');
+          }
+        } catch (err) {
+          console.error('Parse error:', err);
+          setServerError('Failed to parse the CSV file. Please ensure it is a valid CSV file.');
+          setStatus('error');
+        }
+      },
+      error: (error) => {
+        console.error('PapaParse error:', error);
+        setServerError(`Failed to parse the CSV file: ${error.message}`);
         setStatus('error');
-        return;
-      }
-
-      // Validate headers
-      const headers = Object.keys(json[0]).map((h) => h.toLowerCase().trim());
-      const missing = REQUIRED_COLUMNS.filter(
-        (c) => !headers.includes(c)
-      );
-
-      if (missing.length > 0) {
-        setValidationErrors([
-          {
-            row: 0,
-            message: `Missing required columns: ${missing.join(', ')}. Please download the sample file for the correct format.`,
-          },
-        ]);
-        setStatus('error');
-        return;
-      }
-
-      // Map rows
-      const rows: ParsedRow[] = json.map((r) => {
-        const get = (key: string): string | null => {
-          const val = r[key];
-          if (val === null || val === undefined) return null;
-          return String(val).trim();
-        };
-
-        return {
-          category_name: get('category_name') ?? '',
-          subcategory_name: get('subcategory_name'),
-          dish_name: get('dish_name') ?? '',
-          dish_description: get('dish_description'),
-          dish_price: get('dish_price'),
-          dish_is_available: get('dish_is_available'),
-          variant_name: get('variant_name'),
-          variant_price: get('variant_price'),
-        };
-      });
-
-      setParsedRows(rows);
-      setStatus('validating');
-      setProgress(30);
-
-      // Client-side pre-validation (server is source of truth)
-      const errors = validateClient(rows);
-      if (errors.length > 0) {
-        setValidationErrors(errors);
-        setStatus('error');
-        setProgress(0);
-      } else {
-        setProgress(50);
-        setStatus('idle');
-      }
-    } catch (err) {
-      console.error('Parse error:', err);
-      setServerError('Failed to parse the file. Please ensure it is a valid CSV or XLSX file.');
-      setStatus('error');
-    }
+      },
+    });
   };
 
   /* ---------------------------------------------------------------- */
@@ -333,41 +341,17 @@ export function ImportMenuModal({
   };
 
   /* ---------------------------------------------------------------- */
-  /* SAMPLE DOWNLOADS                                                  */
+  /* SAMPLE DOWNLOAD                                                   */
   /* ---------------------------------------------------------------- */
 
-  const downloadSample = (format: 'csv' | 'xlsx') => {
-    const ws = XLSX.utils.aoa_to_sheet([
-      SAMPLE_HEADERS,
-      ...SAMPLE_ROWS,
-    ]);
+  const downloadSample = () => {
+    const csvData = Papa.unparse({
+      fields: SAMPLE_HEADERS,
+      data: SAMPLE_ROWS,
+    });
 
-    // Set column widths
-    ws['!cols'] = [
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 22 },
-      { wch: 35 },
-      { wch: 12 },
-      { wch: 18 },
-      { wch: 14 },
-      { wch: 14 },
-    ];
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Menu Import');
-
-    if (format === 'csv') {
-      const csv = XLSX.utils.sheet_to_csv(ws);
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      triggerDownload(blob, 'menu-import-sample.csv');
-    } else {
-      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([wbout], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      });
-      triggerDownload(blob, 'menu-import-sample.xlsx');
-    }
+    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+    triggerDownload(blob, 'menu-import-sample.csv');
   };
 
   const triggerDownload = (blob: Blob, filename: string) => {
@@ -402,32 +386,24 @@ export function ImportMenuModal({
             Import Menu
           </DialogTitle>
           <DialogDescription>
-            Bulk import categories, subcategories, dishes, and variants from a CSV or Excel file.
+            Bulk import categories, subcategories, dishes, and variants from a CSV file.
             Existing records are reused — no duplicates are created.
           </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="flex-1 pr-2">
           <div className="space-y-5">
-            {/* SAMPLE DOWNLOADS */}
+            {/* SAMPLE DOWNLOAD */}
             <div>
               <p className="text-sm font-medium mb-2">Download sample file</p>
               <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => downloadSample('csv')}
+                  onClick={downloadSample}
                 >
                   <FileText className="w-4 h-4 mr-2" />
                   Sample CSV
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => downloadSample('xlsx')}
-                >
-                  <FileSpreadsheet className="w-4 h-4 mr-2" />
-                  Sample XLSX
                 </Button>
               </div>
             </div>
@@ -441,17 +417,17 @@ export function ImportMenuModal({
               >
                 <Upload className="w-8 h-8 text-slate-400" />
                 <span className="text-sm text-slate-600">
-                  {file ? file.name : 'Click to select CSV or XLSX file'}
+                  {file ? file.name : 'Click to select CSV file'}
                 </span>
                 <span className="text-xs text-slate-400">
-                  Supported: .csv, .xlsx
+                  Supported: .csv
                 </span>
               </label>
               <input
                 id="import-file-input"
                 ref={fileInputRef}
                 type="file"
-                accept=".csv,.xlsx,.xls"
+                accept=".csv"
                 onChange={handleFileSelect}
                 className="hidden"
               />
