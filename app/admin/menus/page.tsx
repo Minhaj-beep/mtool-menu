@@ -48,9 +48,12 @@ import {
   FolderOpen,
   GripVertical,
   Pencil,
+  Upload,
 } from 'lucide-react';
 
 import { toast } from 'sonner';
+
+import { ImportMenuModal } from '@/components/menu/ImportMenuModal';
 
 /* -------------------------------------------------------------------------- */
 /* TYPES */
@@ -148,6 +151,8 @@ export default function MenuCategoriesPage() {
   const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(null);
   const [editName, setEditName] = useState('');
   const [editParentId, setEditParentId] = useState('');
+
+  const [importOpen, setImportOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -402,10 +407,20 @@ export default function MenuCategoriesPage() {
             <p className="text-sm text-muted-foreground">{categories.length} total</p>
           </div>
 
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm"><Plus size={16} /></Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setImportOpen(true)}
+            >
+              <Upload size={16} className="mr-1" />
+              Import
+            </Button>
+
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm"><Plus size={16} /></Button>
+              </DialogTrigger>
 
             <DialogContent className="max-w-md w-[95%] rounded-2xl">
               <DialogHeader>
@@ -437,6 +452,7 @@ export default function MenuCategoriesPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
       </div>
 
@@ -515,6 +531,14 @@ export default function MenuCategoriesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* IMPORT MODAL */}
+      <ImportMenuModal
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        restaurantId={restaurantId}
+        onImported={loadCategories}
+      />
     </div>
   );
 }
