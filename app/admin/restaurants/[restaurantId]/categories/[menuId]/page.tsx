@@ -378,7 +378,7 @@ export default function MenuEditPage() {
           <CardContent className="space-y-4">
             {category.dishes.length === 0 ? (
               <p className="text-sm text-slate-500 text-center">
-                No dishes in this category
+                No items in this category
               </p>
             ) : (
               category.dishes.map((dish) => (

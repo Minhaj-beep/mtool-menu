@@ -540,7 +540,7 @@ export default function CategoryDishesPage() {
         <CardContent className="p-3">
           {dishesToRender.length === 0 ? (
             <div className="py-8 text-center text-sm text-muted-foreground">
-              No dishes yet — add your first dish
+              No items yet — add your first item
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

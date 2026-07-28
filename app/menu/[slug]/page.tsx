@@ -116,7 +116,7 @@ export default function PublicMenuPage() {
                 <Search className="w-12 h-12" style={{ color: theme.colors.textSecondary }} />
               </div>
               <h3 className="text-2xl font-bold mb-2" style={{ color: theme.colors.textPrimary }}>
-                No dishes found
+                No items found
               </h3>
               <p className="text-lg mb-4" style={{ color: theme.colors.textSecondary }}>
                 Try searching with different keywords
