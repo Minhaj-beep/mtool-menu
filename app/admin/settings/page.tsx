@@ -220,14 +220,14 @@ export default function SettingsPage() {
           Settings
         </h1>
         <p className="text-muted-foreground">
-          Manage your restaurant settings
+          Manage your settings
         </p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>
-            Restaurant Information
+            Business Information
           </CardTitle>
           <CardDescription>
             Update branding and integrations
@@ -238,7 +238,7 @@ export default function SettingsPage() {
 
           {/* Name */}
           <div className="space-y-2">
-            <Label>Restaurant Name</Label>
+            <Label>Name</Label>
             <Input
               value={formData.name}
               onChange={(e) =>
@@ -372,10 +372,10 @@ export default function SettingsPage() {
                   Open Google Place ID Finder
                 </li>
                 <li>
-                  Search your restaurant name
+                  Search your place name
                 </li>
                 <li>
-                  Click your restaurant
+                  Click your place
                 </li>
                 <li>
                   Copy the Place ID

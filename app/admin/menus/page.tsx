@@ -346,7 +346,7 @@ export default function MenuCategoriesPage() {
           <div>
             <CardTitle className="text-base md:text-lg">{category.name}</CardTitle>
             <CardDescription>
-              {category.dishes_count} dishes
+              {category.dishes_count} items
               {isChild && <span className="ml-2 text-xs text-slate-400">subcategory</span>}
             </CardDescription>
           </div>
@@ -533,12 +533,12 @@ export default function MenuCategoriesPage() {
       </Dialog>
 
       {/* IMPORT MODAL */}
-      <ImportMenuModal
+      {/* <ImportMenuModal
         open={importOpen}
         onOpenChange={setImportOpen}
         restaurantId={restaurantId}
         onImported={loadCategories}
-      />
+      /> */}
     </div>
   );
 }

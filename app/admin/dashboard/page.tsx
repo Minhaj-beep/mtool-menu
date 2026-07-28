@@ -261,7 +261,7 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
         <p className="text-slate-600 mt-2 text-base">
-          Welcome back! Here's an overview of your restaurant.
+          Welcome back!
         </p>
       </div>
 
@@ -304,7 +304,7 @@ export default function DashboardPage() {
 
         {/* Dishes */}
         <StatCard
-          title="Dishes"
+          title="Items"
           icon={<Utensils className="h-4 w-4 text-muted-foreground" />}
           value={stats.totalDishes}
           max={planLimits.maxDishes}
@@ -376,13 +376,13 @@ export default function DashboardPage() {
             />
 
             <KpiCard
-              title="Avg Views / Dish"
+              title="Avg Views / Item"
               value={viewsLoading ? <Skeleton className="h-6 w-28" /> : avgViewsPerDish}
               subtitle="Engagement per item"
             />
 
             <KpiCard
-              title="Top Dish"
+              title="Top Item"
               value={viewsLoading ? <Skeleton className="h-6 w-40" /> : (topDish ? `${topDish.dish_name} • ${topDish.views} views` : 'No data yet')}
               subtitle="Most viewed item"
             />
@@ -391,7 +391,7 @@ export default function DashboardPage() {
           {/* Dish-wise horizontal bars */}
           <Card className="border-slate-200">
             <CardHeader>
-              <CardTitle>Top Viewed Dishes</CardTitle>
+              <CardTitle>Top Viewed Items</CardTitle>
               <CardDescription>
                 Ranked by total views (last 30 days)
               </CardDescription>
