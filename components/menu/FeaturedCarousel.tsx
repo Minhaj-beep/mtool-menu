@@ -23,7 +23,7 @@ export function FeaturedCarousel({
       <div className="flex items-center gap-2 mb-6">
         <Sparkles className="w-6 h-6" style={{ color: theme.colors.primary }} />
         <h2 className="text-2xl md:text-3xl font-bold" style={{ color: theme.colors.textPrimary, fontFamily: theme.font.family }}>
-          Featured Dishes
+          Featured
         </h2>
       </div>
       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory">
@@ -36,9 +36,9 @@ export function FeaturedCarousel({
           >
             <div className="relative h-48">
               <Image src={dish.image_url!} alt={dish.name} fill sizes="256px" className="object-cover" />
-              <div className="absolute top-2 left-2">
+              {/* <div className="absolute top-2 left-2">
                 <DishBadges dish={dish} index={index} hasImage={true} />
-              </div>
+              </div> */}
             </div>
             <div className="p-4">
               <h3 className="font-bold text-lg mb-1 line-clamp-1" style={{ color: theme.colors.textPrimary }}>

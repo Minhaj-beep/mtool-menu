@@ -75,7 +75,7 @@ export function DishCard({
           </button>
         ) : null}
         <div className="p-4">
-          <DishBadges dish={item} index={index} hasImage={hasImage} />
+          {/* <DishBadges dish={item} index={index} hasImage={hasImage} /> */}
           <h3 className="text-base font-bold mb-1 line-clamp-1" style={{ color: theme.colors.textPrimary }}>
             {item.name}
           </h3>
@@ -141,7 +141,7 @@ export function DishCard({
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <DishBadges dish={item} index={index} hasImage={hasImage} />
+          {/* <DishBadges dish={item} index={index} hasImage={hasImage} /> */}
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 md:gap-4">
             <div className="flex-1 min-w-0">
               <h3 className="text-lg md:text-xl font-bold mb-1.5" style={{ color: theme.colors.textPrimary }}>

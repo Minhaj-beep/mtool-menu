@@ -50,7 +50,7 @@ export function SearchBar({
             ref={inputRef}
             type="search"
             enterKeyHint="search"
-            placeholder="Search dishes..."
+            placeholder="Search here..."
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}

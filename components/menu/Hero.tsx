@@ -88,14 +88,14 @@ export function Hero({ restaurant, theme }: { restaurant: Restaurant; theme: Res
             >
               {restaurant.name}
             </h1>
-            <p
+            {/* <p
               className="text-lg md:text-xl font-medium"
               style={{
                 color: hasBanner || theme.hero !== 'minimal' ? hexToRgba('#ffffff', 0.9) : theme.colors.textSecondary,
               }}
             >
               Digital Menu
-            </p>
+            </p> */}
           </div>
 
           <div className="flex items-center gap-4">
