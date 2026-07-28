@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: `mtoool Menu - India's #1 Digital Menu Management Platform`,
-  description: "mtoool Menu: The ultimate QR code menu builder for restaurants. Features real-time digital menu management, contactless ordering, and integrated Google Review tools to increase your restaurant's visibility and customer satisfaction.",
+  description: "mtoool Menu: The ultimate QR code menu builder for shop. Features real-time digital menu management, and integrated Google Review tools to increase your business's visibility and customer satisfaction.",
 
   icons: {
     icon: [

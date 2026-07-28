@@ -194,10 +194,10 @@ export default function SignupPage() {
 
             {/* LOCATION */}
             <div className="space-y-2">
-              <Label>Restaurant Location</Label>
+              <Label>Location</Label>
               <Input
                 ref={locationInputRef}
-                placeholder="Search your restaurant"
+                placeholder="Search your location"
                 required
               />
             </div>

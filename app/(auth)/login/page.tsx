@@ -57,7 +57,7 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
           <CardDescription className="text-center">
-            Sign in to your restaurant dashboard
+            Sign in to your dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>
