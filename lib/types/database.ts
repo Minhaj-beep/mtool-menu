@@ -30,6 +30,33 @@ export type FontFamilyOption =
   | 'Nunito'
   | 'Playfair Display';
 
+export interface SocialLinks {
+  facebook?: string;
+  instagram?: string;
+  twitter?: string;
+  whatsapp?: string;
+  youtube?: string;
+  website?: string;
+  [key: string]: string | undefined;
+}
+
+export interface DayHours {
+  open: string; // "10:30"
+  close: string; // "20:30"
+  closed: boolean;
+}
+
+export type WeekDay =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
+
+export type OpeningHours = Partial<Record<WeekDay, DayHours>>;
+
 export interface Restaurant {
   id: string;
   name: string;
@@ -37,6 +64,13 @@ export interface Restaurant {
   google_place_id: string | null;
   logo_url: string | null;
   theme_color: string;
+
+  // 📞 Contact / social / hours
+  social_links: SocialLinks | null;
+  contact_numbers: string[] | null;
+  opening_hours: OpeningHours | null;
+  show_social_media: boolean;
+  show_contact_numbers: boolean;
 
   // 🎨 Branding / theming (see lib/theme/theme-engine.ts)
   secondary_theme_color: string | null;

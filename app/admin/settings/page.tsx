@@ -23,7 +23,27 @@ import {
   Link as LinkIcon,
   ExternalLink,
   HelpCircle,
+  Phone,
+  Plus,
+  Facebook,
+  Instagram,
+  Twitter,
+  Youtube,
+  Globe,
+  MessageCircle,
+  Clock,
 } from 'lucide-react';
+import { WEEKDAYS, DEFAULT_DAY_HOURS } from '@/lib/utils/opening-hours';
+import type { OpeningHours, SocialLinks } from '@/lib/types/database';
+
+const SOCIAL_FIELDS: { key: keyof SocialLinks; label: string; icon: any; placeholder: string }[] = [
+  { key: 'facebook', label: 'Facebook', icon: Facebook, placeholder: 'https://facebook.com/yourpage' },
+  { key: 'instagram', label: 'Instagram', icon: Instagram, placeholder: 'https://instagram.com/yourpage' },
+  { key: 'twitter', label: 'Twitter / X', icon: Twitter, placeholder: 'https://x.com/yourpage' },
+  { key: 'whatsapp', label: 'WhatsApp', icon: MessageCircle, placeholder: '+91 90000 00000' },
+  { key: 'youtube', label: 'YouTube', icon: Youtube, placeholder: 'https://youtube.com/@yourchannel' },
+  { key: 'website', label: 'Website', icon: Globe, placeholder: 'https://yourwebsite.com' },
+];
 
 export default function SettingsPage() {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
@@ -47,6 +67,11 @@ export default function SettingsPage() {
     menu_layout: 'grid',
     dark_mode: false,
     theme_preset: 'custom',
+    contact_numbers: [] as string[],
+    social_links: {} as SocialLinks,
+    opening_hours: {} as OpeningHours,
+    show_contact_numbers: true,
+    show_social_media: true,
   });
 
   /* ================= Load ================= */
@@ -90,6 +115,11 @@ export default function SettingsPage() {
         menu_layout: data.menu_layout ?? 'grid',
         dark_mode: data.dark_mode ?? false,
         theme_preset: data.theme_preset ?? 'custom',
+        contact_numbers: data.contact_numbers ?? [],
+        social_links: data.social_links ?? {},
+        opening_hours: data.opening_hours ?? {},
+        show_contact_numbers: data.show_contact_numbers ?? true,
+        show_social_media: data.show_social_media ?? true,
       });
     } catch (err: any) {
       toast.error(err.message || 'Failed to load restaurant');
@@ -162,12 +192,101 @@ export default function SettingsPage() {
     }));
   };
 
+  /* ================= Contact Numbers ================= */
+
+  const handleAddContactNumber = () => {
+    if (formData.contact_numbers.length >= 2) {
+      toast.error('You can only add up to 2 contact numbers');
+      return;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      contact_numbers: [...prev.contact_numbers, ''],
+    }));
+  };
+
+  const handleContactNumberChange = (index: number, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      contact_numbers: prev.contact_numbers.map((n, i) => (i === index ? value : n)),
+    }));
+  };
+
+  const handleRemoveContactNumber = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      contact_numbers: prev.contact_numbers.filter((_, i) => i !== index),
+    }));
+  };
+
+  /* ================= Social Links ================= */
+
+  const handleSocialLinkChange = (key: keyof SocialLinks, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      social_links: { ...prev.social_links, [key]: value },
+    }));
+  };
+
+  /* ================= Opening Hours ================= */
+
+  const handleToggleDayClosed = (dayKey: string, closed: boolean) => {
+    setFormData((prev) => {
+      const existing = prev.opening_hours[dayKey as keyof OpeningHours] ?? DEFAULT_DAY_HOURS;
+      return {
+        ...prev,
+        opening_hours: {
+          ...prev.opening_hours,
+          [dayKey]: { ...existing, closed },
+        },
+      };
+    });
+  };
+
+  const handleDayTimeChange = (dayKey: string, field: 'open' | 'close', value: string) => {
+    setFormData((prev) => {
+      const existing = prev.opening_hours[dayKey as keyof OpeningHours] ?? DEFAULT_DAY_HOURS;
+      return {
+        ...prev,
+        opening_hours: {
+          ...prev.opening_hours,
+          [dayKey]: { ...existing, [field]: value },
+        },
+      };
+    });
+  };
+
+  const handleApplyToAllDays = () => {
+    const monday = formData.opening_hours.monday ?? DEFAULT_DAY_HOURS;
+    const updated: OpeningHours = {};
+    WEEKDAYS.forEach(({ key }) => {
+      updated[key] = { ...monday };
+    });
+    setFormData((prev) => ({ ...prev, opening_hours: updated }));
+    toast.success('Applied Monday\'s hours to every day');
+  };
+
   /* ================= Save ================= */
 
   const handleSave = async () => {
     setSaving(true);
 
     try {
+      const cleanedContactNumbers = formData.contact_numbers
+        .map((n) => n.trim())
+        .filter(Boolean)
+        .slice(0, 2);
+
+      const cleanedSocialLinks = Object.fromEntries(
+        Object.entries(formData.social_links).filter(([, v]) => !!(v && v.trim()))
+      );
+
+      const payload = {
+        ...formData,
+        contact_numbers: cleanedContactNumbers,
+        social_links: cleanedSocialLinks,
+      };
+
       const response = await fetch(
         '/api/restaurant',
         {
@@ -175,7 +294,7 @@ export default function SettingsPage() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload),
         }
       );
 
@@ -185,6 +304,11 @@ export default function SettingsPage() {
         throw new Error(data.error);
 
       setRestaurant(data.restaurant);
+      setFormData((prev) => ({
+        ...prev,
+        contact_numbers: cleanedContactNumbers,
+        social_links: cleanedSocialLinks,
+      }));
 
       toast.success('Saved successfully');
     } catch (err: any) {
@@ -338,6 +462,151 @@ export default function SettingsPage() {
               value={`/menu/${restaurant.slug}`}
               disabled
             />
+          </div>
+
+          {/* CONTACT NUMBERS */}
+          <div className="space-y-3 border-t pt-6">
+            <div className="flex items-center justify-between">
+              <Label className="flex gap-2 items-center text-base">
+                <Phone className="w-4 h-4" />
+                Contact Numbers
+              </Label>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Show on menu</span>
+                <input
+                  type="checkbox"
+                  checked={formData.show_contact_numbers}
+                  onChange={(e) =>
+                    setFormData({ ...formData, show_contact_numbers: e.target.checked })
+                  }
+                />
+              </div>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              Add up to 2 phone numbers customers can tap to call from your menu.
+            </p>
+
+            <div className="space-y-2">
+              {formData.contact_numbers.map((number, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    value={number}
+                    placeholder="+91 90000 00000"
+                    onChange={(e) => handleContactNumberChange(index, e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleRemoveContactNumber(index)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+
+              {formData.contact_numbers.length < 2 && (
+                <Button type="button" variant="outline" onClick={handleAddContactNumber}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Contact Number
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* SOCIAL LINKS */}
+          <div className="space-y-3 border-t pt-6">
+            <div className="flex items-center justify-between">
+              <Label className="flex gap-2 items-center text-base">
+                <LinkIcon className="w-4 h-4" />
+                Social Media Links
+              </Label>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Show on menu</span>
+                <input
+                  type="checkbox"
+                  checked={formData.show_social_media}
+                  onChange={(e) =>
+                    setFormData({ ...formData, show_social_media: e.target.checked })
+                  }
+                />
+              </div>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              Add links to your social profiles. Leave a field blank to hide that icon.
+            </p>
+
+            <div className="space-y-2">
+              {SOCIAL_FIELDS.map(({ key, label, icon: Icon, placeholder }) => (
+                <div key={key} className="flex gap-2 items-center">
+                  <Icon className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <Input
+                    value={formData.social_links[key] ?? ''}
+                    placeholder={`${label} — ${placeholder}`}
+                    onChange={(e) => handleSocialLinkChange(key, e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* OPENING HOURS */}
+          <div className="space-y-3 border-t pt-6">
+            <Label className="flex gap-2 items-center text-base">
+              <Clock className="w-4 h-4" />
+              Opening Hours
+            </Label>
+
+            <p className="text-sm text-muted-foreground">
+              Set your hours for each day. Customers will see this on your public menu.
+            </p>
+
+            <div className="space-y-2">
+              {WEEKDAYS.map(({ key, label }) => {
+                const day = formData.opening_hours[key] ?? DEFAULT_DAY_HOURS;
+                return (
+                  <div key={key} className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <span className="w-24 text-sm font-medium shrink-0">{label}</span>
+
+                    <label className="flex items-center gap-1.5 text-sm text-muted-foreground shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={!day.closed}
+                        onChange={(e) => handleToggleDayClosed(key, !e.target.checked)}
+                      />
+                      Open
+                    </label>
+
+                    {!day.closed ? (
+                      <>
+                        <Input
+                          type="time"
+                          value={day.open}
+                          onChange={(e) => handleDayTimeChange(key, 'open', e.target.value)}
+                          className="w-32"
+                        />
+                        <span className="text-sm text-muted-foreground">to</span>
+                        <Input
+                          type="time"
+                          value={day.close}
+                          onChange={(e) => handleDayTimeChange(key, 'close', e.target.value)}
+                          className="w-32"
+                        />
+                      </>
+                    ) : (
+                      <span className="text-sm text-muted-foreground italic">Closed</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <Button type="button" variant="outline" size="sm" onClick={handleApplyToAllDays}>
+              Copy Monday's hours to all days
+            </Button>
           </div>
 
           {/* GOOGLE PLACE ID SECTION */}

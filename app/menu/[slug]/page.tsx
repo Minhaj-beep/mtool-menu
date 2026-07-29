@@ -14,6 +14,7 @@ import { ImageModal } from '@/components/menu/ImageModal';
 import { SkeletonLoader } from '@/components/menu/SkeletonLoader';
 import { MobileQuickNav } from '@/components/menu/MobileQuickNav';
 import { GoogleReviewButton } from '@/components/menu/GoogleReviewButton';
+import { VisitUs } from '@/components/menu/VisitUs';
 import { UnavailableScreen, MenuNotFoundScreen } from '@/components/menu/StatusScreens';
 
 export default function PublicMenuPage() {
@@ -143,6 +144,8 @@ export default function PublicMenuPage() {
               ))}
             </div>
           )}
+
+          <VisitUs restaurant={restaurant} theme={theme} />
 
           {showWatermark && (
             <div className="mt-16 text-center pb-8">
