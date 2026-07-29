@@ -60,6 +60,9 @@ export type OpeningHours = Partial<Record<WeekDay, DayHours>>;
 export interface Restaurant {
   id: string;
   name: string;
+  address?: string;
+  city?: string;
+  country?: string;
   slug: string;
   google_place_id: string | null;
   logo_url: string | null;

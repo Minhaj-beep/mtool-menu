@@ -10,7 +10,6 @@ import {
   Youtube,
   Globe,
   MessageCircle,
-  Navigation,
 } from 'lucide-react';
 import type { Restaurant } from '@/lib/types/database';
 import type { RestaurantTheme } from '@/lib/theme/theme-engine';
@@ -36,18 +35,6 @@ function normalizeSocialUrl(platform: string, value: string): string {
   return `https://${value.replace(/^@/, '')}`;
 }
 
-function buildGoogleMapsUrl(restaurant: Restaurant): string | null {
-  const { address, city, country, latitude, longitude } = restaurant;
-  if (latitude && longitude) {
-    return `https://maps.google.com/maps?q=${latitude},${longitude}`;
-  }
-  if (address || city || country) {
-    const query = [address, city, country].filter(Boolean).join(', ');
-    return `https://maps.google.com/maps?q=${encodeURIComponent(query)}`;
-  }
-  return null;
-}
-
 export function VisitUs({ restaurant, theme }: { restaurant: Restaurant; theme: RestaurantTheme }) {
   const contactNumbers = restaurant.show_contact_numbers ? restaurant.contact_numbers ?? [] : [];
   const socialLinks = restaurant.show_social_media ? restaurant.social_links ?? {} : {};
@@ -55,13 +42,17 @@ export function VisitUs({ restaurant, theme }: { restaurant: Restaurant; theme: 
   const openNow = isRestaurantOpenNow(restaurant.opening_hours);
 
   const socialEntries = Object.entries(socialLinks).filter(([, url]) => !!url);
-  const mapUrl = buildGoogleMapsUrl(restaurant);
+
+  // Build formatted address
+  const addressParts = [restaurant.address, restaurant.city, restaurant.country].filter(Boolean);
+  const formattedAddress = addressParts.join(', ');
 
   const hasContact = contactNumbers.length > 0;
   const hasHours = hoursLines.length > 0;
+  const hasAddress = formattedAddress.length > 0;
   const hasSocial = socialEntries.length > 0;
 
-  if (!hasContact && !hasHours && !hasSocial) return null;
+  if (!hasContact && !hasHours && !hasAddress && !hasSocial) return null;
 
   // Helper to render each info card
   const renderInfoCard = (
@@ -94,6 +85,16 @@ export function VisitUs({ restaurant, theme }: { restaurant: Restaurant; theme: 
   );
 
   const infoCards = [];
+
+  if (hasAddress) {
+    infoCards.push(
+      renderInfoCard(
+        MapPin,
+        'Address',
+        <p className="text-sm font-medium leading-relaxed">{formattedAddress}</p>
+      )
+    );
+  }
 
   if (hasContact) {
     infoCards.push(
@@ -146,24 +147,9 @@ export function VisitUs({ restaurant, theme }: { restaurant: Restaurant; theme: 
         <h2 className="text-2xl md:text-3xl font-bold" style={{ color: theme.colors.textPrimary }}>
           Visit Us
         </h2>
-        {mapUrl && (
-          <a
-            href={mapUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-auto inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-full transition-colors hover:opacity-80"
-            style={{
-              backgroundColor: theme.colors.primary,
-              color: '#fff',
-            }}
-          >
-            <Navigation className="w-4 h-4" />
-            Directions
-          </a>
-        )}
       </div>
 
-      {/* Info cards */}
+      {/* Info cards (Address, Contact, Hours) */}
       {infoCards.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           {infoCards}
