@@ -1,6 +1,7 @@
 'use client';
 
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, UtensilsCrossed } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import type { RestaurantTheme } from '@/lib/theme/theme-engine';
 import { getCardSurfaceStyle, hexToRgba } from '@/lib/theme/theme-engine';
@@ -22,8 +23,9 @@ function DishList({
 }) {
   if (dishes.length === 0) {
     return (
-      <div className="px-4 py-8 md:px-8 md:py-16 text-center" style={{ color: theme.colors.textSecondary }}>
-        <p className="text-sm md:text-lg">No items in this category yet</p>
+      <div className="px-4 py-10 md:px-8 md:py-16 text-center flex flex-col items-center gap-2" style={{ color: theme.colors.textSecondary }}>
+        <UtensilsCrossed className="w-8 h-8 opacity-40" />
+        <p className="text-sm md:text-base">No items in this category yet</p>
       </div>
     );
   }
@@ -93,15 +95,19 @@ export function CategorySection({
     : category.dishes.length;
 
   return (
-    <div
+    <motion.div
       id={category.id}
       ref={(el) => registerRef(category.id, el)}
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-60px' }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
       className="overflow-hidden transition-shadow duration-300"
       style={getCardSurfaceStyle(theme)}
     >
       <button
         onClick={onToggle}
-        className="w-full px-4 py-3 md:px-8 md:py-6 relative overflow-hidden text-left transition-colors"
+        className="w-full px-4 py-3 md:px-8 md:py-6 relative overflow-hidden text-left transition-colors active:scale-[0.995]"
         style={{
           background: `linear-gradient(135deg, ${hexToRgba(theme.colors.primary,0.08)} 0%, ${hexToRgba(theme.colors.primary,0.02)} 100%)`,
         }}
@@ -187,7 +193,7 @@ export function CategorySection({
           />
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 

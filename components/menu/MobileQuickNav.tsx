@@ -24,7 +24,7 @@ export function MobileQuickNav({
             input?.focus();
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className="flex flex-col items-center gap-1 px-4 py-2 transition-colors"
+          className="flex flex-col items-center gap-1 px-4 py-2 transition-all active:scale-90"
           style={{ color: theme.colors.textSecondary }}
         >
           <Search className="w-5 h-5" />
@@ -34,7 +34,7 @@ export function MobileQuickNav({
         {showScrollTop && (
           <button
             onClick={onScrollTop}
-            className="flex flex-col items-center gap-1 px-4 py-2 transition-all"
+            className="flex flex-col items-center gap-1 px-4 py-2 transition-all active:scale-90"
             style={{ color: theme.colors.primary }}
           >
             <div

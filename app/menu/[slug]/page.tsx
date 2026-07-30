@@ -1,6 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import { motion, useScroll } from 'framer-motion';
 import { Search, Utensils } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePublicMenu } from '@/lib/hooks/use-public-menu';
@@ -20,6 +21,7 @@ import { UnavailableScreen, MenuNotFoundScreen } from '@/components/menu/StatusS
 export default function PublicMenuPage() {
   const params = useParams();
   const slug = params.slug as string;
+  const { scrollYProgress: scrollProgress } = useScroll();
 
   const {
     restaurant,
@@ -68,12 +70,22 @@ export default function PublicMenuPage() {
 
   const theme = buildTheme(restaurant);
   const allowImages = !!planLimits?.allowImages;
+  const searchResultCount = searchQuery
+    ? filteredCategories.reduce((sum, c) => sum + c.dishes.length, 0)
+    : undefined;
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
       className="min-h-screen pb-24 md:pb-8 relative"
       style={{ ...themeToCssVars(theme), backgroundColor: theme.colors.background, fontFamily: theme.font.family }}
     >
+      <motion.div
+        className="fixed top-0 left-0 right-0 h-1 z-50 origin-left"
+        style={{ backgroundColor: theme.colors.primary, scaleX: scrollProgress }}
+      />
       {theme.backgroundImageUrl && (
         <>
           <div
@@ -87,7 +99,7 @@ export default function PublicMenuPage() {
       <Hero restaurant={restaurant} theme={theme} />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <SearchBar value={searchQuery} onChange={setSearchQuery} theme={theme} />
+        <SearchBar value={searchQuery} onChange={setSearchQuery} theme={theme} resultCount={searchResultCount} />
 
         {!searchQuery && (
           <CategoryNav
@@ -106,7 +118,10 @@ export default function PublicMenuPage() {
           {!searchQuery && <FeaturedCarousel dishes={featuredDishes} theme={theme} onSelect={setSelectedDish} />}
 
           {filteredCategories.length === 0 ? (
-            <div
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
               className="text-center py-20 md:py-24"
               style={{ backgroundColor: theme.colors.surface, borderRadius: theme.radius.lg, boxShadow: theme.shadow.sm }}
             >
@@ -125,7 +140,7 @@ export default function PublicMenuPage() {
               <Button onClick={() => setSearchQuery('')} variant="outline" className="mt-4">
                 Clear Search
               </Button>
-            </div>
+            </motion.div>
           ) : (
             <div className="space-y-6 md:space-y-8">
               {categoryTree.map((category, categoryIndex) => (
@@ -166,6 +181,6 @@ export default function PublicMenuPage() {
       <MobileQuickNav theme={theme} showScrollTop={showScrollTop} onScrollTop={scrollToTop} />
 
       {selectedDish && <ImageModal dish={selectedDish} theme={theme} onClose={() => setSelectedDish(null)} />}
-    </div>
+    </motion.div>
   );
 }

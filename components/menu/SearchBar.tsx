@@ -10,10 +10,12 @@ export function SearchBar({
   value,
   onChange,
   theme,
+  resultCount,
 }: {
   value: string;
   onChange: (value: string) => void;
   theme: RestaurantTheme;
+  resultCount?: number;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -79,6 +81,12 @@ export function SearchBar({
             </button>
           )}
         </div>
+
+        {value && typeof resultCount === 'number' && (
+          <p className="text-xs mt-2 pl-1" style={{ color: theme.colors.textSecondary }}>
+            {resultCount === 0 ? 'No matches' : `${resultCount} ${resultCount === 1 ? 'result' : 'results'} found`}
+          </p>
+        )}
       </div>
     </div>
   );
