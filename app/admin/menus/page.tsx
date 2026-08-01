@@ -533,12 +533,12 @@ export default function MenuCategoriesPage() {
       </Dialog>
 
       {/* IMPORT MODAL */}
-      {/* <ImportMenuModal
+      <ImportMenuModal
         open={importOpen}
         onOpenChange={setImportOpen}
         restaurantId={restaurantId}
         onImported={loadCategories}
-      /> */}
+      />
     </div>
   );
 }

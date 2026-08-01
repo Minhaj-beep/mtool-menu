@@ -13,7 +13,8 @@ export function DishBadges({
   const badges: { text: string; icon: typeof Award; className: string }[] = [];
 
   if (index < 3 && hasImage) {
-    badges.push({ text: "Chef's Special", icon: Award, className: 'bg-amber-500/90' });
+    // badges.push({ text: "Chef's Special", icon: Award, className: 'bg-amber-500/90' });
+    return;
   } else if (index < 5) {
     badges.push({ text: 'Popular', icon: TrendingUp, className: 'bg-blue-500/90' });
   }

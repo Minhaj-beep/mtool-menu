@@ -94,9 +94,9 @@ export function DishCard({
               className="absolute inset-x-0 bottom-0 h-16 opacity-0 group-hover:opacity-100 transition-opacity"
               style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.35), transparent)' }}
             />
-            <div className="absolute top-2 left-2 right-2 flex items-start justify-between gap-2">
+            {/* <div className="absolute top-2 left-2 right-2 flex items-start justify-between gap-2">
               <DishBadges dish={item} index={index} hasImage={hasImage} />
-            </div>
+            </div> */}
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <div className="w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
                 <ZoomIn className="w-4 h-4 text-white" />
@@ -211,7 +211,7 @@ export function DishCard({
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <DishBadges dish={item} index={index} hasImage={hasImage} />
+          {/* <DishBadges dish={item} index={index} hasImage={hasImage} /> */}
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 md:gap-4">
             <div className="flex-1 min-w-0">
               <h3

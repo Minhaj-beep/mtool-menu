@@ -87,9 +87,9 @@ export function FeaturedCarousel({
                   className="absolute inset-x-0 bottom-0 h-14"
                   style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.3), transparent)' }}
                 />
-                <div className="absolute top-2 left-2">
+                {/* <div className="absolute top-2 left-2">
                   <DishBadges dish={dish} index={index} hasImage={true} />
-                </div>
+                </div> */}
               </div>
               <div className="p-4">
                 <h3 className="font-bold text-lg mb-1 line-clamp-1" style={{ color: theme.colors.textPrimary }}>
