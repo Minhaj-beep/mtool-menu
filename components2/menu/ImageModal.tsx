@@ -9,12 +9,10 @@ import type { PublicMenuItem } from './types';
 export function ImageModal({
   dish,
   theme,
-  showPrice = true,
   onClose,
 }: {
   dish: PublicMenuItem;
   theme: RestaurantTheme;
-  showPrice?: boolean;
   onClose: () => void;
 }) {
   const [imageError, setImageError] = useState(false);
@@ -118,43 +116,41 @@ export function ImageModal({
                 {dish.name}
               </h3>
 
-              {showPrice && (
-                <div className="flex flex-col items-end gap-1">
-                  {dish.dish_variants?.length > 0 ? (
-                    <>
-                      <div
-                        className="text-xs"
-                        style={{
-                          color: theme.colors.textSecondary,
-                        }}
-                      >
-                        Available Variants
-                      </div>
-
-                      {dish.dish_variants.map((v) => (
-                        <div
-                          key={v.id}
-                          className="text-lg font-semibold"
-                          style={{
-                            color: theme.colors.primary,
-                          }}
-                        >
-                          {v.name} — ₹{v.price}
-                        </div>
-                      ))}
-                    </>
-                  ) : (
+              <div className="flex flex-col items-end gap-1">
+                {dish.dish_variants?.length > 0 ? (
+                  <>
                     <div
-                      className="text-2xl md:text-3xl font-bold"
+                      className="text-xs"
                       style={{
-                        color: theme.colors.primary,
+                        color: theme.colors.textSecondary,
                       }}
                     >
-                      ₹{dish.price}
+                      Available Variants
                     </div>
-                  )}
-                </div>
-              )}
+
+                    {dish.dish_variants.map((v) => (
+                      <div
+                        key={v.id}
+                        className="text-lg font-semibold"
+                        style={{
+                          color: theme.colors.primary,
+                        }}
+                      >
+                        {v.name} — ₹{v.price}
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <div
+                    className="text-2xl md:text-3xl font-bold"
+                    style={{
+                      color: theme.colors.primary,
+                    }}
+                  >
+                    ₹{dish.price}
+                  </div>
+                )}
+              </div>
             </div>
 
             {dish.description && (

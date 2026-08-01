@@ -13,20 +13,18 @@ function DishList({
   layout,
   theme,
   allowImages,
-  showPrice,
   onSelectDish,
 }: {
   dishes: PublicMenuItem[];
   layout: 'grid' | 'list' | 'compact';
   theme: RestaurantTheme;
   allowImages: boolean;
-  showPrice: boolean;
   onSelectDish: (dish: PublicMenuItem) => void;
 }) {
   if (dishes.length === 0) {
     return (
       <div className="px-4 py-10 md:px-8 md:py-16 text-center flex flex-col items-center gap-2" style={{ color: theme.colors.textSecondary }}>
-        <UtensilsCrossed className="w-8 h-8 opacity-40" />
+        {/* <UtensilsCrossed className="w-8 h-8 opacity-40" /> */}
         <p className="text-sm md:text-base">No items in this category yet</p>
       </div>
     );
@@ -43,7 +41,6 @@ function DishList({
             hasImage={!!(item.image_url && allowImages)}
             theme={theme}
             layout={layout}
-            showPrice={showPrice}
             onSelect={onSelectDish}
           />
         ))}
@@ -64,7 +61,6 @@ function DishList({
           hasImage={!!(item.image_url && allowImages)}
           theme={theme}
           layout={layout}
-          showPrice={showPrice}
           onSelect={onSelectDish}
         />
       ))}
@@ -80,7 +76,6 @@ export function CategorySection({
   theme,
   layout,
   allowImages,
-  showPrice = true,
   onSelectDish,
   registerRef,
 }: {
@@ -91,7 +86,6 @@ export function CategorySection({
   theme: RestaurantTheme;
   layout: 'grid' | 'list' | 'compact';
   allowImages: boolean;
-  showPrice?: boolean;
   onSelectDish: (dish: PublicMenuItem) => void;
   registerRef: (id: string, el: HTMLDivElement | null) => void;
 }) {
@@ -184,7 +178,6 @@ export function CategorySection({
                   layout={layout}
                   theme={theme}
                   allowImages={allowImages}
-                  showPrice={showPrice}
                   onSelectDish={onSelectDish}
                 />
               </div>
@@ -196,7 +189,6 @@ export function CategorySection({
             layout={layout}
             theme={theme}
             allowImages={allowImages}
-            showPrice={showPrice}
             onSelectDish={onSelectDish}
           />
         )}

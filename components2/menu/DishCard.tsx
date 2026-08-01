@@ -12,15 +12,11 @@ function PriceTag({
   dish,
   theme,
   size = 'md',
-  showPrice = true,
 }: {
   dish: PublicMenuItem;
   theme: RestaurantTheme;
   size?: 'sm' | 'md';
-  showPrice?: boolean;
 }) {
-  if (!showPrice) return null;
-
   const textSize = size === 'sm' ? 'text-sm font-bold' : 'text-lg md:text-xl font-bold';
   return (
     <div
@@ -55,7 +51,6 @@ export function DishCard({
   hasImage,
   theme,
   layout,
-  showPrice = true,
   onSelect,
 }: {
   item: PublicMenuItem;
@@ -63,7 +58,6 @@ export function DishCard({
   hasImage: boolean;
   theme: RestaurantTheme;
   layout: 'grid' | 'list' | 'compact';
-  showPrice?: boolean;
   onSelect: (dish: PublicMenuItem) => void;
 }) {
   const cardSurface = getCardSurfaceStyle(theme);
@@ -129,7 +123,7 @@ export function DishCard({
               {item.description}
             </p>
           )}
-          <PriceTag dish={item} theme={theme} size="sm" showPrice={showPrice} />
+          <PriceTag dish={item} theme={theme} size="sm" />
         </div>
       </motion.div>
     );
@@ -168,11 +162,7 @@ export function DishCard({
           </span>
         </div>
         <span className="flex-shrink-0 font-semibold text-sm" style={{ color: theme.colors.primary }}>
-          {showPrice
-            ? item.dish_variants?.length > 0
-              ? `from ₹${Math.min(...item.dish_variants.map((v) => v.price))}`
-              : `₹${item.price}`
-            : null}
+          {item.dish_variants?.length > 0 ? `from ₹${Math.min(...item.dish_variants.map((v) => v.price))}` : `₹${item.price}`}
         </span>
       </motion.button>
     );
@@ -240,7 +230,7 @@ export function DishCard({
               )}
             </div>
             <div className="flex-shrink-0">
-              <PriceTag dish={item} theme={theme} showPrice={showPrice} />
+              <PriceTag dish={item} theme={theme} />
             </div>
           </div>
         </div>

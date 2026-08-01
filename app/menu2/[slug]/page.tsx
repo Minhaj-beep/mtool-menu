@@ -70,7 +70,6 @@ export default function PublicMenuPage() {
 
   const theme = buildTheme(restaurant);
   const allowImages = !!planLimits?.allowImages;
-  const showPrice = restaurant.show_price ?? true;
   const searchResultCount = searchQuery
     ? filteredCategories.reduce((sum, c) => sum + c.dishes.length, 0)
     : undefined;
@@ -116,7 +115,7 @@ export default function PublicMenuPage() {
             <GoogleReviewButton placeId={restaurant.google_place_id} theme={theme} />
           )}
 
-          {!searchQuery && <FeaturedCarousel dishes={featuredDishes} theme={theme} showPrice={showPrice} onSelect={setSelectedDish} />}
+          {!searchQuery && <FeaturedCarousel dishes={featuredDishes} theme={theme} onSelect={setSelectedDish} />}
 
           {filteredCategories.length === 0 ? (
             <motion.div
@@ -154,7 +153,6 @@ export default function PublicMenuPage() {
                   theme={theme}
                   layout={theme.layout}
                   allowImages={allowImages}
-                  showPrice={showPrice}
                   onSelectDish={setSelectedDish}
                   registerRef={registerCategoryRef}
                 />
@@ -182,7 +180,7 @@ export default function PublicMenuPage() {
 
       <MobileQuickNav theme={theme} showScrollTop={showScrollTop} onScrollTop={scrollToTop} />
 
-      {selectedDish && <ImageModal dish={selectedDish} theme={theme} showPrice={showPrice} onClose={() => setSelectedDish(null)} />}
+      {selectedDish && <ImageModal dish={selectedDish} theme={theme} onClose={() => setSelectedDish(null)} />}
     </motion.div>
   );
 }

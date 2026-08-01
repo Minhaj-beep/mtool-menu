@@ -72,6 +72,7 @@ export default function SettingsPage() {
     opening_hours: {} as OpeningHours,
     show_contact_numbers: true,
     show_social_media: true,
+    show_price: true,
   });
 
   /* ================= Load ================= */
@@ -120,6 +121,7 @@ export default function SettingsPage() {
         opening_hours: data.opening_hours ?? {},
         show_contact_numbers: data.show_contact_numbers ?? true,
         show_social_media: data.show_social_media ?? true,
+        show_price: data.show_price ?? true,
       });
     } catch (err: any) {
       toast.error(err.message || 'Failed to load restaurant');
@@ -870,6 +872,22 @@ export default function SettingsPage() {
                 setFormData({
                   ...formData,
                   dark_mode: e.target.checked,
+                })
+              }
+            />
+          </div>
+
+          {/* Dark Mode */}
+          <div className="flex items-center justify-between">
+            <Label>Show Price</Label>
+
+            <input
+              type="checkbox"
+              checked={formData.show_price}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  show_price: e.target.checked,
                 })
               }
             />

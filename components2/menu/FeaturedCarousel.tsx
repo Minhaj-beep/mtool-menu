@@ -11,12 +11,10 @@ import type { PublicMenuItem } from './types';
 export function FeaturedCarousel({
   dishes,
   theme,
-  showPrice = true,
   onSelect,
 }: {
   dishes: PublicMenuItem[];
   theme: RestaurantTheme;
-  showPrice?: boolean;
   onSelect: (dish: PublicMenuItem) => void;
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -102,26 +100,24 @@ export function FeaturedCarousel({
                     {dish.description}
                   </p>
                 )}
-                {showPrice && (
-                  <div
-                    className="inline-flex flex-col items-start px-3 py-1.5 text-sm font-semibold"
-                    style={{
-                      backgroundColor: hexToRgba(theme.colors.primary, 0.12),
-                      color: theme.colors.primary,
-                      borderRadius: theme.radius.sm,
-                    }}
-                  >
-                    {dish.dish_variants?.length > 0 ? (
-                      dish.dish_variants.map((v) => (
-                        <span key={v.id}>
-                          {v.name} — ₹{v.price}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-lg font-bold">₹{dish.price}</span>
-                    )}
-                  </div>
-                )}
+                <div
+                  className="inline-flex flex-col items-start px-3 py-1.5 text-sm font-semibold"
+                  style={{
+                    backgroundColor: hexToRgba(theme.colors.primary, 0.12),
+                    color: theme.colors.primary,
+                    borderRadius: theme.radius.sm,
+                  }}
+                >
+                  {dish.dish_variants?.length > 0 ? (
+                    dish.dish_variants.map((v) => (
+                      <span key={v.id}>
+                        {v.name} — ₹{v.price}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-lg font-bold">₹{dish.price}</span>
+                  )}
+                </div>
               </div>
             </button>
           ))}
