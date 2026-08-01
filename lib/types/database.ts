@@ -74,6 +74,7 @@ export interface Restaurant {
   opening_hours: OpeningHours | null;
   show_social_media: boolean;
   show_contact_numbers: boolean;
+  show_price: boolean;
 
   // 🎨 Branding / theming (see lib/theme/theme-engine.ts)
   secondary_theme_color: string | null;
