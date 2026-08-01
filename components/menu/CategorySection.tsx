@@ -24,7 +24,7 @@ function DishList({
   if (dishes.length === 0) {
     return (
       <div className="px-4 py-10 md:px-8 md:py-16 text-center flex flex-col items-center gap-2" style={{ color: theme.colors.textSecondary }}>
-        <UtensilsCrossed className="w-8 h-8 opacity-40" />
+        {/* <UtensilsCrossed className="w-8 h-8 opacity-40" /> */}
         <p className="text-sm md:text-base">No items in this category yet</p>
       </div>
     );
