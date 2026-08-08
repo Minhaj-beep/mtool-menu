@@ -20,11 +20,19 @@ export async function DELETE(
       );
     }
 
+    /* Optional: caller can target a single image inside image_urls,
+       e.g. DELETE /api/dishes/:id/image?url=https://... . When
+       omitted, every image on the dish is removed (legacy behavior,
+       kept for older clients that only support one image). */
+    const { searchParams } = new URL(request.url);
+    const targetUrl = searchParams.get('url');
+
     /* Get dish */
     const { data: dish, error } = await supabase
       .from('dishes')
       .select(`
         image_url,
+        image_urls,
         menu_categories (
           restaurant_id
         )
@@ -39,29 +47,48 @@ export async function DELETE(
       );
     }
 
-    if (!dish.image_url) {
+    const currentImageUrls: string[] = Array.isArray(dish.image_urls)
+      ? dish.image_urls
+      : dish.image_url
+        ? [dish.image_url]
+        : [];
+
+    if (currentImageUrls.length === 0) {
       return NextResponse.json(
         { error: 'No image to delete' },
         { status: 400 }
       );
     }
 
-    const imageUrl = dish.image_url;
+    if (targetUrl && !currentImageUrls.includes(targetUrl)) {
+      return NextResponse.json(
+        { error: 'Image not found on this dish' },
+        { status: 404 }
+      );
+    }
+
+    const imagesToDelete = targetUrl ? [targetUrl] : currentImageUrls;
+    const remainingImageUrls = targetUrl
+      ? currentImageUrls.filter((url) => url !== targetUrl)
+      : [];
+
     const restaurantId =
       (dish as any).menu_categories.restaurant_id;
 
     /* Delete from S3 */
-    const key = extractS3Key(imageUrl);
-
-    if (key) {
-      await deleteS3File(key);
+    for (const url of imagesToDelete) {
+      const key = extractS3Key(url);
+      if (key) {
+        await deleteS3File(key);
+      }
     }
 
-    /* Update DB: remove image */
+    /* Update DB: remove image(s) */
     await supabase
       .from('dishes')
       .update({
-        image_url: null,
+        image_url: remainingImageUrls.length > 0 ? remainingImageUrls[0] : null,
+        image_urls: remainingImageUrls,
         updated_at: new Date()
       })
       .eq('id', params.id);
@@ -69,11 +96,12 @@ export async function DELETE(
     /* Update image count */
     await supabase.rpc('adjust_image_count', {
       rid: restaurantId,
-      delta: -1
+      delta: -imagesToDelete.length
     });
 
     return NextResponse.json({
-      success: true
+      success: true,
+      image_urls: remainingImageUrls
     });
 
   } catch (err) {

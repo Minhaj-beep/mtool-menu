@@ -35,6 +35,7 @@ export async function PUT(
       .from('dishes')
       .select(`
         image_url,
+        image_urls,
         menu_categories (
           restaurant_id
         )
@@ -49,46 +50,54 @@ export async function PUT(
       );
     }
 
-    const prevImage = existing.image_url;
     const restaurantId =
       (existing as any).menu_categories.restaurant_id;
 
-    const newImage =
-      updates.image_url && updates.image_url.trim() !== ''
-        ? updates.image_url
-        : null;
-
     /* =============================
-       IMAGE HANDLING
+       IMAGE HANDLING (multi-image)
+       image_urls is the source of truth. image_url is kept in
+       sync as the first image for backward compatibility with
+       older clients that only understand a single image.
     ============================== */
 
-    /* IMAGE REPLACED */
-    if (prevImage && newImage && prevImage !== newImage) {
-      const key = extractS3Key(prevImage);
-      if (key) await deleteS3File(key);
-    }
+    const imagesWereProvided =
+      Object.prototype.hasOwnProperty.call(updates, 'image_urls') ||
+      Object.prototype.hasOwnProperty.call(updates, 'image_url');
 
-    /* IMAGE REMOVED */
-    if (prevImage && !newImage) {
-      const key = extractS3Key(prevImage);
-      if (key) await deleteS3File(key);
+    if (imagesWereProvided) {
+      const prevImageUrls: string[] = Array.isArray(existing.image_urls)
+        ? existing.image_urls
+        : existing.image_url
+          ? [existing.image_url]
+          : [];
 
-      await supabase.rpc('adjust_image_count', {
-        rid: restaurantId,
-        delta: -1
-      });
-    }
+      const newImageUrls: string[] = Array.isArray(updates.image_urls)
+        ? updates.image_urls
+            .filter((u: unknown): u is string => typeof u === 'string' && u.trim().length > 0)
+            .map((u: string) => u.trim())
+        : typeof updates.image_url === 'string' && updates.image_url.trim() !== ''
+          ? [updates.image_url.trim()]
+          : [];
 
-    /* IMAGE ADDED */
-    if (!prevImage && newImage) {
-      await supabase.rpc('adjust_image_count', {
-        rid: restaurantId,
-        delta: 1
-      });
-    }
+      /* Any image that existed before but is no longer present must
+         be removed from S3 so we never leak orphaned files. */
+      const removedImages = prevImageUrls.filter((url) => !newImageUrls.includes(url));
 
-    if (!newImage) {
-      delete updates.image_url;
+      for (const url of removedImages) {
+        const key = extractS3Key(url);
+        if (key) await deleteS3File(key);
+      }
+
+      const countDelta = newImageUrls.length - prevImageUrls.length;
+      if (countDelta !== 0) {
+        await supabase.rpc('adjust_image_count', {
+          rid: restaurantId,
+          delta: countDelta
+        });
+      }
+
+      updates.image_urls = newImageUrls;
+      updates.image_url = newImageUrls.length > 0 ? newImageUrls[0] : null;
     }
 
     /* =============================
@@ -210,6 +219,7 @@ export async function DELETE(
       .from('dishes')
       .select(`
         image_url,
+        image_urls,
         menu_categories (
           restaurant_id
         )
@@ -229,19 +239,26 @@ export async function DELETE(
 
 
 
-    const imageUrl = dish.image_url;
+    const imageUrls: string[] = Array.isArray(dish.image_urls)
+      ? dish.image_urls
+      : dish.image_url
+        ? [dish.image_url]
+        : [];
 
     const restaurantId =
       (dish as any).menu_categories.restaurant_id;
 
 
 
-    if (imageUrl) {
+    if (imageUrls.length > 0) {
 
-      const key = extractS3Key(imageUrl);
-
-      if (key) {
-        await deleteS3File(key);
+      // Delete every image belonging to this dish from S3, not just
+      // the primary one, so nothing is left orphaned in the bucket.
+      for (const url of imageUrls) {
+        const key = extractS3Key(url);
+        if (key) {
+          await deleteS3File(key);
+        }
       }
 
 
@@ -249,7 +266,7 @@ export async function DELETE(
         'adjust_image_count',
         {
           rid: restaurantId,
-          delta: -1
+          delta: -imageUrls.length
         }
       );
 

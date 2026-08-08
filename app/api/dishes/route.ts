@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
       description,
       price,
       image_url,
+      image_urls,
       is_available,
       category_id,
       variants
@@ -167,11 +168,21 @@ export async function POST(request: NextRequest) {
 
     /* =============================
        PREP IMAGE CHECK
+       (image_urls is the source of truth; image_url is kept in
+       sync as the first image for backward compatibility with
+       older clients that only understand a single image)
     ============================== */
 
-    const hasImage =
-      typeof image_url === 'string' &&
-      image_url.trim().length > 0;
+    const cleanImageUrls: string[] = Array.isArray(image_urls)
+      ? image_urls
+          .filter((u: unknown): u is string => typeof u === 'string' && u.trim().length > 0)
+          .map((u: string) => u.trim())
+      : typeof image_url === 'string' && image_url.trim().length > 0
+        ? [image_url.trim()]
+        : [];
+
+    const hasImage = cleanImageUrls.length > 0;
+    const primaryImageUrl = hasImage ? cleanImageUrls[0] : null;
 
     /* =============================
        CREATE DISH
@@ -183,7 +194,8 @@ export async function POST(request: NextRequest) {
         name,
         description,
         price: hasVariants ? 0 : Number(price),
-        image_url: hasImage ? image_url.trim() : null,
+        image_url: primaryImageUrl,
+        image_urls: cleanImageUrls,
         is_available: is_available ?? true,
         category_id
       })
@@ -230,12 +242,11 @@ export async function POST(request: NextRequest) {
     ============================== */
 
     if (hasImage) {
-      console.log("Has image count: ", hasImage)
       const { error: rpcError } = await supabase.rpc(
         'adjust_image_count',
         {
           rid: restaurantId,
-          delta: 1
+          delta: cleanImageUrls.length
         }
       );
 

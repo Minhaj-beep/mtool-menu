@@ -142,6 +142,7 @@ export interface Dish {
   description: string | null;
   price: number;
   image_url: string | null;
+  image_urls: string[];
   is_available: boolean;
   created_at: string;
   updated_at: string;

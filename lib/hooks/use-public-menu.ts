@@ -104,6 +104,7 @@ export function usePublicMenu(slug: string) {
             description,
             price,
             image_url,
+            image_urls,
             is_available,
             dish_variants (
               id,
@@ -128,7 +129,15 @@ export function usePublicMenu(slug: string) {
           parent_category_id: category.parent_category_id ?? null,
           dishes:
             category.dishes
-              ?.map((item: any) => ({ ...item, dish_variants: item.dish_variants ?? [] }))
+              ?.map((item: any) => ({
+                ...item,
+                dish_variants: item.dish_variants ?? [],
+                image_urls: Array.isArray(item.image_urls)
+                  ? item.image_urls
+                  : item.image_url
+                    ? [item.image_url]
+                    : [],
+              }))
               .filter((item: any) => item.is_available) ?? [],
         })) ?? [];
 

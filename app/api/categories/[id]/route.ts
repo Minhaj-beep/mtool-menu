@@ -106,9 +106,8 @@ export async function DELETE(
     const { data: dishes, error: dishesError } =
       await supabase
         .from('dishes')
-        .select('image_url')
-        .eq('category_id', params.id)
-        .not('image_url', 'is', null);
+        .select('image_url, image_urls')
+        .eq('category_id', params.id);
 
     if (dishesError) {
       return NextResponse.json(
@@ -117,10 +116,18 @@ export async function DELETE(
       );
     }
 
-    // 🧹 Extract S3 keys
+    // 🧹 Extract S3 keys — use the full image_urls array per dish (falling
+    // back to the single image_url for older rows) so every image is
+    // cleaned up, not just the first/primary one.
     const imageKeys =
       dishes
-        ?.map((d) => d.image_url)
+        ?.flatMap((d) =>
+          Array.isArray(d.image_urls) && d.image_urls.length > 0
+            ? d.image_urls
+            : d.image_url
+              ? [d.image_url]
+              : []
+        )
         .filter(Boolean)
         .map(extractS3Key) ?? [];
 

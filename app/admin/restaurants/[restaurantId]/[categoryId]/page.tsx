@@ -42,6 +42,7 @@ type Dish = {
   description: string | null;
   price: number;
   image_url: string | null;
+  image_urls: string[];   
   is_available: boolean;
   dish_variants: Dish_variants[]
 };
@@ -85,14 +86,17 @@ export default function CategoryDishesPage() {
     description: '',
     price: '',
     image_url: '',
+    image_urls: [] as string[],
     is_available: true,
     variants: [{ name: '', price: '' }]
   });
 
-  // Image file to upload on save + preview URL
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
-  const [removingImage, setRemovingImage] = useState(false);
+  // Image files to upload on save + local previews (multi-image)
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
+  const [removingImageUrl, setRemovingImageUrl] = useState<string | null>(null);
+
+  const MAX_DISH_IMAGES = 5;
 
   // Loaders for API actions
   const [processingSave, setProcessingSave] = useState(false);
@@ -152,6 +156,7 @@ export default function CategoryDishesPage() {
             description,
             price,
             image_url,
+            image_urls,
             is_available,
             dish_variants (
               id,
@@ -187,35 +192,53 @@ export default function CategoryDishesPage() {
   /* -------------------------------------------------------------------------- */
 
   useEffect(() => {
-    // create preview for selected file
-    if (!imageFile) {
-      setImagePreviewUrl(null);
+    // create local previews for newly selected files
+    if (imageFiles.length === 0) {
+      setImagePreviewUrls([]);
       return;
     }
-    const url = URL.createObjectURL(imageFile);
-    setImagePreviewUrl(url);
+    const urls = imageFiles.map((f) => URL.createObjectURL(f));
+    setImagePreviewUrls(urls);
     return () => {
-      URL.revokeObjectURL(url);
+      urls.forEach((u) => URL.revokeObjectURL(u));
     };
-  }, [imageFile]);
+  }, [imageFiles]);
+
+  const existingImageCount = newDish.image_urls?.length || 0;
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
-    const file = e.target.files?.[0] ?? null;
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Max file size is 5MB');
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+
+    const remainingSlots = MAX_DISH_IMAGES - existingImageCount - imageFiles.length;
+    if (remainingSlots <= 0) {
+      toast.error(`You can add up to ${MAX_DISH_IMAGES} images per dish`);
+      e.target.value = '';
       return;
     }
-    setImageFile(file);
+
+    const oversized = files.some((f) => f.size > 5 * 1024 * 1024);
+    if (oversized) {
+      toast.error('Max file size is 5MB per image');
+      e.target.value = '';
+      return;
+    }
+
+    setImageFiles((prev) => [...prev, ...files.slice(0, remainingSlots)]);
+    e.target.value = '';
   };
 
-  const uploadImage = async (): Promise<string | null> => {
-    if (!imageFile || !restaurant) return null;
+  const removeSelectedFile = (index: number) => {
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    if (!restaurant) return null;
     if (!PLAN_LIMITS[restaurant.subscription_plan].allowImages) return null;
 
     // ✅ compress before upload
-    const compressedFile = await compressImage(imageFile);
+    const compressedFile = await compressImage(file);
 
     const presign = await fetch('/api/upload/presigned-url', {
       method: 'POST',
@@ -255,18 +278,19 @@ export default function CategoryDishesPage() {
     setProcessingSave(true);
 
     try {
-      let imageUrl: string | null = newDish.image_url || null;
+      let imageUrls: string[] = [...(newDish.image_urls || [])];
 
-      // Upload image only here when a new file is selected
-      if (imageFile) {
-        imageUrl = await uploadImage();
+      if (imageFiles.length > 0) {
+        const uploaded = await Promise.all(imageFiles.map((f) => uploadImage(f)));
+        imageUrls = [...imageUrls, ...uploaded.filter((u): u is string => Boolean(u))];
       }
 
       const payload = {
         name: newDish.name,
         description: newDish.description || null,
         price: hasVariants ? 0 : Number(newDish.price),
-        image_url: imageUrl,
+        image_url: imageUrls[0] || null,
+        image_urls: imageUrls,
         is_available: newDish.is_available,
         category_id: categoryId,
         variants: hasVariants
@@ -297,13 +321,14 @@ export default function CategoryDishesPage() {
       // reset form & state
       setDishDialogOpen(false);
       setEditingDish(null);
-      setImageFile(null);
-      setImagePreviewUrl(null);
+      setImageFiles([]);
+      setImagePreviewUrls([]);
       setNewDish({
         name: '',
         description: '',
         price: '',
         image_url: '',
+        image_urls: [],
         is_available: true,
         variants: [
           { name: '', price: '' }
@@ -389,8 +414,8 @@ export default function CategoryDishesPage() {
       setDeletingId(null);
       setDishDialogOpen(false);
       setEditingDish(null);
-      setImageFile(null);
-      setImagePreviewUrl(null);
+      setImageFiles([]);
+      setImagePreviewUrls([]);
       setVariants([])
       setHasVariants(false)
     }
@@ -400,28 +425,36 @@ export default function CategoryDishesPage() {
   /*                                 Delete Images                               */
   /* -------------------------------------------------------------------------- */
 
-  const removeImage = async (dishId: string) => {
+  /* Removes a single already-saved image (identified by its URL) from
+     a dish. This deletes the file from S3 and updates image_urls. */
+  const removeImage = async (dishId: string, imageUrl: string) => {
     try {
-      setRemovingImage(true);
+      setRemovingImageUrl(imageUrl);
 
-      const res = await fetch(`/api/dishes/${dishId}/image`, {
-        method: 'DELETE',
-      });
+      const res = await fetch(
+        `/api/dishes/${dishId}/image?url=${encodeURIComponent(imageUrl)}`,
+        { method: 'DELETE' }
+      );
 
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error);
 
       // clear UI
-      setImageFile(null);
-      setImagePreviewUrl(null);
-      setNewDish({ ...newDish, image_url: '' });
+      setNewDish((prev) => ({
+        ...prev,
+        image_urls: (data.image_urls as string[]) ?? prev.image_urls.filter((u) => u !== imageUrl),
+        image_url:
+          (data.image_urls as string[])?.[0] ??
+          prev.image_urls.filter((u) => u !== imageUrl)[0] ??
+          '',
+      }));
 
       toast.success('Image removed');
 
     } catch (err: any) {
       toast.error(err?.message || 'Failed to remove image');
     } finally {
-      setRemovingImage(false);
+      setRemovingImageUrl(null);
     }
   };
 
@@ -508,13 +541,14 @@ export default function CategoryDishesPage() {
           <Button
             onClick={() => {
               setEditingDish(null);
-              setImageFile(null);
-              setImagePreviewUrl(null);
+              setImageFiles([]);
+              setImagePreviewUrls([]);
               setNewDish({
                 name: '',
                 description: '',
                 price: '',
                 image_url: '',
+                image_urls: [],
                 is_available: true,
                 variants: []
               });
@@ -610,13 +644,14 @@ export default function CategoryDishesPage() {
                           variant="ghost"
                           onClick={() => {
                             setEditingDish(dish);
-                            setImageFile(null);
-                            setImagePreviewUrl(dish.image_url ?? null);
+                            setImageFiles([]);
+                            setImagePreviewUrls([]);
                             setNewDish({
                               name: dish.name,
                               description: dish.description ?? '',
                               price: dish.price.toString(),
                               image_url: dish.image_url ?? '',
+                              image_urls: dish.image_urls?.length ? dish.image_urls : (dish.image_url ? [dish.image_url] : []),
                               is_available: dish.is_available,
                               variants: dish.dish_variants.map(v => ({
                                 name: v.name,
@@ -668,8 +703,8 @@ export default function CategoryDishesPage() {
             <button onClick={() => {
               setDishDialogOpen(false);
               setEditingDish(null);
-              setImageFile(null);
-              setImagePreviewUrl(null);
+              setImageFiles([]);
+              setImagePreviewUrls([]);
               setVariants([])
               setHasVariants(false)
             }} className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100">
@@ -685,33 +720,47 @@ export default function CategoryDishesPage() {
           </DialogHeader>
 
           <div className="space-y-3 mt-2">
-            {(imagePreviewUrl || newDish.image_url) && (
+            {(newDish.image_urls.length > 0 || imagePreviewUrls.length > 0) && (
               <div className="space-y-2">
-                <div className="w-full h-56 overflow-hidden rounded-md bg-slate-50">
-                  <img
-                    src={imagePreviewUrl ?? newDish.image_url ?? ''}
-                    alt={newDish.name || editingDish?.name || 'Dish image'}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {/* Already-saved images — each can be individually removed (deletes from S3 too) */}
+                  {newDish.image_urls.map((url) => (
+                    <div key={url} className="relative w-full h-20 overflow-hidden rounded-md bg-slate-50 group">
+                      <img src={url} alt="Dish" className="w-full h-full object-cover" loading="lazy" />
+                      <button
+                        type="button"
+                        onClick={() => editingDish && removeImage(editingDish.id, url)}
+                        disabled={removingImageUrl === url}
+                        aria-label="Remove image"
+                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center disabled:opacity-50"
+                      >
+                        {removingImageUrl === url ? (
+                          <span className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full" />
+                        ) : (
+                          <X className="w-3 h-3" />
+                        )}
+                      </button>
+                    </div>
+                  ))}
 
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="w-full flex items-center justify-center gap-2"
-                  onClick={() => editingDish && removeImage(editingDish.id)}
-                  disabled={removingImage}
-                >
-                  {removingImage ? (
-                    <>
-                      <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                      Removing...
-                    </>
-                  ) : (
-                    'Remove Image'
-                  )}
-                </Button>
+                  {/* Newly selected files, not yet uploaded — can be dropped before saving */}
+                  {imagePreviewUrls.map((url, i) => (
+                    <div key={url} className="relative w-full h-20 overflow-hidden rounded-md bg-slate-50 border-2 border-dashed border-slate-300">
+                      <img src={url} alt="New upload preview" className="w-full h-full object-cover" loading="lazy" />
+                      <button
+                        type="button"
+                        onClick={() => removeSelectedFile(i)}
+                        aria-label="Remove selected image"
+                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-400">
+                  {newDish.image_urls.length + imagePreviewUrls.length}/{MAX_DISH_IMAGES} images
+                </p>
               </div>
             )}
 
@@ -806,9 +855,23 @@ export default function CategoryDishesPage() {
                   className="inline-flex items-center gap-2 cursor-pointer select-none text-sm bg-slate-100 px-3 py-2 rounded"
                 >
                   <ImageIcon className="w-4 h-4" />
-                  <span>{imageFile ? imageFile.name : newDish.image_url ? 'Using existing image' : 'Upload image'}</span>
+                  <span>
+                    {existingImageCount + imageFiles.length >= MAX_DISH_IMAGES
+                      ? `Max ${MAX_DISH_IMAGES} images reached`
+                      : imageFiles.length > 0
+                        ? `${imageFiles.length} image(s) selected`
+                        : 'Add image(s)'}
+                  </span>
                 </label>
-                <input id="dish-image" type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
+                <input
+                  id="dish-image"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageSelect}
+                  disabled={existingImageCount + imageFiles.length >= MAX_DISH_IMAGES}
+                  className="hidden"
+                />
               </div>
             )}
 
@@ -829,8 +892,8 @@ export default function CategoryDishesPage() {
                 onClick={() => {
                   setDishDialogOpen(false);
                   setEditingDish(null);
-                  setImageFile(null);
-                  setImagePreviewUrl(null);
+                  setImageFiles([]);
+                  setImagePreviewUrls([]);
                   setVariants([])
                   setHasVariants(false)
                 }}

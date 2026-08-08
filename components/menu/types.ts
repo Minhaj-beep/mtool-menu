@@ -10,6 +10,7 @@ export type PublicMenuItem = {
   description: string | null;
   price: number;
   image_url: string | null;
+  image_urls: string[];
   is_available: boolean;
   dish_variants: DishVariant[];
 };
