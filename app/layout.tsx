@@ -5,8 +5,14 @@ import { Toaster } from 'sonner';
 
 const inter = Inter({ subsets: ['latin'] });
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mtoool.menu';
+
 export const metadata: Metadata = {
-  title: `mtoool Menu - India's #1 Digital Menu Management Platform`,
+  metadataBase: new URL(APP_URL),
+  title: {
+    default: `mtoool Menu - India's #1 Digital Menu Management Platform`,
+    template: '%s | mtoool menu',
+  },
   description: "mtoool Menu: The ultimate QR code menu builder for shop. Features real-time digital menu management, and integrated Google Review tools to increase your business's visibility and customer satisfaction.",
 
   icons: {

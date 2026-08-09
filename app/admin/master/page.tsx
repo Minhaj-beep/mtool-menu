@@ -26,7 +26,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ShieldAlert, ExternalLink, Search, Store, Image as ImageIcon, UtensilsCrossed } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import {
+  ShieldAlert,
+  ExternalLink,
+  Search,
+  Store,
+  Image as ImageIcon,
+  UtensilsCrossed,
+  Globe,
+  Pencil,
+} from 'lucide-react';
 
 type MasterRestaurant = {
   id: string;
@@ -42,6 +61,7 @@ type MasterRestaurant = {
   category_count: number;
   dish_count: number;
   created_at: string;
+  custom_domain: string | null;
 };
 
 export default function MasterAdminPage() {
@@ -51,6 +71,11 @@ export default function MasterAdminPage() {
   const [search, setSearch] = useState('');
   const [planFilter, setPlanFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  // Custom domain edit dialog
+  const [domainDialogRestaurant, setDomainDialogRestaurant] = useState<MasterRestaurant | null>(null);
+  const [domainInput, setDomainInput] = useState('');
+  const [savingDomain, setSavingDomain] = useState(false);
 
   useEffect(() => {
     load();
@@ -98,7 +123,8 @@ export default function MasterAdminPage() {
         !search ||
         r.name.toLowerCase().includes(search.toLowerCase()) ||
         r.slug.toLowerCase().includes(search.toLowerCase()) ||
-        (r.owner_email ?? '').toLowerCase().includes(search.toLowerCase());
+        (r.owner_email ?? '').toLowerCase().includes(search.toLowerCase()) ||
+        (r.custom_domain ?? '').toLowerCase().includes(search.toLowerCase());
 
       const matchesPlan = planFilter === 'all' || r.subscription_plan === planFilter;
       const matchesStatus = statusFilter === 'all' || r.subscription_status === statusFilter;
@@ -117,6 +143,48 @@ export default function MasterAdminPage() {
       totalImages: restaurants.reduce((sum, r) => sum + (r.image_count || 0), 0),
     };
   }, [restaurants]);
+
+  const openDomainDialog = (r: MasterRestaurant) => {
+    setDomainDialogRestaurant(r);
+    setDomainInput(r.custom_domain ?? '');
+  };
+
+  const saveDomain = async () => {
+    if (!domainDialogRestaurant) return;
+
+    try {
+      setSavingDomain(true);
+
+      const res = await fetch(
+        `/api/master/restaurants/${domainDialogRestaurant.id}/domain`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domain: domainInput.trim() }),
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Failed to save domain');
+
+      setRestaurants((prev) =>
+        prev.map((r) =>
+          r.id === domainDialogRestaurant.id
+            ? { ...r, custom_domain: data.custom_domain }
+            : r
+        )
+      );
+
+      toast.success(
+        data.custom_domain ? `Domain set to ${data.custom_domain}` : 'Domain removed'
+      );
+      setDomainDialogRestaurant(null);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to save domain');
+    } finally {
+      setSavingDomain(false);
+    }
+  };
 
   if (state === 'checking' || loading) {
     return (
@@ -261,6 +329,7 @@ export default function MasterAdminPage() {
                 <TableHead>Owner</TableHead>
                 <TableHead>Plan</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Domain</TableHead>
                 <TableHead>Expires</TableHead>
                 <TableHead className="text-right">Dishes</TableHead>
                 <TableHead className="text-right">Images</TableHead>
@@ -304,6 +373,23 @@ export default function MasterAdminPage() {
                       )}
                     </div>
                   </TableCell>
+                  <TableCell>
+                    <button
+                      type="button"
+                      onClick={() => openDomainDialog(r)}
+                      className="group inline-flex items-center gap-1.5 text-sm"
+                    >
+                      {r.custom_domain ? (
+                        <span className="inline-flex items-center gap-1.5 text-slate-700">
+                          <Globe className="w-3.5 h-3.5 text-emerald-600" />
+                          {r.custom_domain}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">Not set</span>
+                      )}
+                      <Pencil className="w-3 h-3 text-slate-300 group-hover:text-slate-600 transition-colors" />
+                    </button>
+                  </TableCell>
                   <TableCell className="text-sm text-slate-600">
                     {r.subscription_expires_at
                       ? new Date(r.subscription_expires_at).toLocaleDateString()
@@ -333,7 +419,7 @@ export default function MasterAdminPage() {
 
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-sm text-slate-500 py-8">
+                  <TableCell colSpan={10} className="text-center text-sm text-slate-500 py-8">
                     No restaurants match your filters.
                   </TableCell>
                 </TableRow>
@@ -342,6 +428,60 @@ export default function MasterAdminPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Custom domain dialog */}
+      <Dialog
+        open={!!domainDialogRestaurant}
+        onOpenChange={(open) => !open && setDomainDialogRestaurant(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Custom domain</DialogTitle>
+            <DialogDescription>
+              {domainDialogRestaurant?.name} — set the domain visitors will use
+              to reach their menu, e.g. <code>thefifthcafe.com</code>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <Input
+              placeholder="thefifthcafe.com"
+              value={domainInput}
+              onChange={(e) => setDomainInput(e.target.value)}
+            />
+
+            <div className="text-xs text-slate-500 bg-slate-50 rounded-md p-3 space-y-1.5">
+              <p className="font-medium text-slate-700">Before saving this, make sure:</p>
+              <p>1. The domain has been added under Vercel → Project → Domains.</p>
+              <p>
+                2. Its DNS has an A record pointing at the IP Vercel showed you (or a
+                CNAME to <code>cname.vercel-dns.com</code> if it's a subdomain).
+              </p>
+              <p>
+                3. Vercel shows <span className="font-medium">"Valid Configuration"</span> for it.
+              </p>
+              <p className="pt-1">
+                Saving this here is the last step — it tells the app which restaurant
+                to show when that domain is visited. Leave it blank to remove a
+                domain mapping.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setDomainDialogRestaurant(null)}
+              disabled={savingDomain}
+            >
+              Cancel
+            </Button>
+            <Button onClick={saveDomain} disabled={savingDomain}>
+              {savingDomain ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

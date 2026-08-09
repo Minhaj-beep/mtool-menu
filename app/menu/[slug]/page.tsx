@@ -1,188 +1,131 @@
-'use client';
+import type { Metadata } from 'next';
+import { getSupabaseServer } from '@/lib/supabase/server';
+import MenuClient from './MenuClient';
 
-import { useParams } from 'next/navigation';
-import { motion, useScroll } from 'framer-motion';
-import { Search, Utensils } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { usePublicMenu } from '@/lib/hooks/use-public-menu';
-import { buildTheme, themeToCssVars } from '@/lib/theme/theme-engine';
-import { Hero } from '@/components/menu/Hero';
-import { SearchBar } from '@/components/menu/SearchBar';
-import { CategoryNav } from '@/components/menu/CategoryNav';
-import { CategorySection } from '@/components/menu/CategorySection';
-import { FeaturedCarousel } from '@/components/menu/FeaturedCarousel';
-import { ImageModal } from '@/components/menu/ImageModal';
-import { SkeletonLoader } from '@/components/menu/SkeletonLoader';
-import { MobileQuickNav } from '@/components/menu/MobileQuickNav';
-import { GoogleReviewButton } from '@/components/menu/GoogleReviewButton';
-import { VisitUs } from '@/components/menu/VisitUs';
-import { UnavailableScreen, MenuNotFoundScreen } from '@/components/menu/StatusScreens';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mtoool.menu';
 
-export default function PublicMenuPage() {
-  const params = useParams();
-  const slug = params.slug as string;
-  const { scrollYProgress: scrollProgress } = useScroll();
+async function getRestaurantForMeta(slug: string) {
+  const supabase = getSupabaseServer();
 
-  const {
-    restaurant,
-    loading,
-    error,
-    searchQuery,
-    setSearchQuery,
-    expandedCategories,
-    toggleCategory,
-    activeCategory,
-    selectedDish,
-    setSelectedDish,
-    showScrollTop,
-    registerCategoryRef,
-    scrollToCategory,
-    scrollToTop,
-    planLimits,
-    showGoogleReview,
-    showWatermark,
-    filteredCategories,
-    categoryTree,
-    navCategories,
-    featuredDishes,
-  } = usePublicMenu(slug);
+  // Public read — the `restaurants` table already has an RLS policy
+  // allowing anon SELECT for menu display, so this works without a
+  // service-role key.
+  const { data } = await supabase
+    .from('restaurants')
+    .select(
+      'name, slug, address, city, country, logo_url, banner_image_url, theme_color, subscription_status, is_on_hold, custom_domain'
+    )
+    .eq('slug', slug)
+    .maybeSingle();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <div className="h-32 bg-slate-200 rounded-2xl animate-pulse" />
-          </div>
-          <SkeletonLoader />
-        </div>
-      </div>
-    );
+  return data;
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { slug: string };
+}): Promise<Metadata> {
+  const restaurant = await getRestaurantForMeta(params.slug);
+
+  if (!restaurant) {
+    return {
+      title: 'Menu not found',
+      description: 'This restaurant menu could not be found.',
+      robots: { index: false, follow: false },
+    };
   }
 
-  if (error === 'subscription_unavailable' && restaurant) {
-    return <UnavailableScreen restaurant={restaurant} />;
-  }
+  const location = [restaurant.city, restaurant.country].filter(Boolean).join(', ');
+  const title = `${restaurant.name} - Menu${location ? ` | ${location}` : ''}`;
+  const description = `Browse the digital menu for ${restaurant.name}${
+    location ? ` in ${location}` : ''
+  }. View dishes, prices, and photos, and find your way to visit us.`;
 
-  if (error || !restaurant) {
-    return <MenuNotFoundScreen message={error} />;
-  }
+  // Prefer their banner (wider, better for social preview cards), then
+  // logo, then fall back to the platform default set in the root layout.
+  const shareImage = restaurant.banner_image_url || restaurant.logo_url;
 
-  const theme = buildTheme(restaurant);
-  const allowImages = !!planLimits?.allowImages;
-  const showPrice = restaurant.show_price ?? true;
-  const searchResultCount = searchQuery
-    ? filteredCategories.reduce((sum, c) => sum + c.dishes.length, 0)
-    : undefined;
+  // If this restaurant has a live custom domain, that's the canonical,
+  // shareable URL — not the menu.mtoool.work path — so search engines
+  // and social previews point at the branded domain instead.
+  const canonicalUrl = restaurant.custom_domain
+    ? `https://${restaurant.custom_domain}`
+    : `${APP_URL}/menu/${restaurant.slug}`;
+
+  const isUnavailable =
+    restaurant.is_on_hold || restaurant.subscription_status !== 'active';
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    robots: isUnavailable
+      ? { index: false, follow: false }
+      : { index: true, follow: true },
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      siteName: `${restaurant.name} · mtoool menu`,
+      type: 'website',
+      ...(shareImage ? { images: [{ url: shareImage, width: 1200, height: 630, alt: restaurant.name }] } : {}),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      ...(shareImage ? { images: [shareImage] } : {}),
+    },
+  };
+}
+
+export default async function PublicMenuPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
+  const restaurant = await getRestaurantForMeta(params.slug);
+
+  const canonicalUrl = restaurant?.custom_domain
+    ? `https://${restaurant.custom_domain}`
+    : restaurant
+      ? `${APP_URL}/menu/${restaurant.slug}`
+      : undefined;
+
+  const jsonLd = restaurant
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'Restaurant',
+        name: restaurant.name,
+        image: restaurant.banner_image_url || restaurant.logo_url || undefined,
+        url: canonicalUrl,
+        ...(restaurant.address
+          ? {
+              address: {
+                '@type': 'PostalAddress',
+                streetAddress: restaurant.address,
+                addressLocality: restaurant.city || undefined,
+                addressCountry: restaurant.country || undefined,
+              },
+            }
+          : {}),
+        hasMenu: canonicalUrl,
+      }
+    : null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
-      className="min-h-screen pb-24 md:pb-8 relative"
-      style={{ ...themeToCssVars(theme), backgroundColor: theme.colors.background, fontFamily: theme.font.family }}
-    >
-      <motion.div
-        className="fixed top-0 left-0 right-0 h-1 z-50 origin-left"
-        style={{ backgroundColor: theme.colors.primary, scaleX: scrollProgress }}
-      />
-      {theme.backgroundImageUrl && (
-        <>
-          <div
-            className="fixed inset-0 -z-10 bg-cover bg-center"
-            style={{ backgroundImage: `url(${theme.backgroundImageUrl})`, filter: 'blur(24px)', transform: 'scale(1.1)' }}
-          />
-          <div className="fixed inset-0 -z-10" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }} />
-        </>
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
       )}
-
-      <Hero restaurant={restaurant} theme={theme} />
-
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <SearchBar value={searchQuery} onChange={setSearchQuery} theme={theme} resultCount={searchResultCount} />
-
-        {!searchQuery && (
-          <CategoryNav
-            categories={navCategories}
-            activeCategory={activeCategory}
-            onSelect={scrollToCategory}
-            theme={theme}
-          />
-        )}
-
-        <div className="py-8 md:py-12">
-          {showGoogleReview && restaurant.google_place_id && (
-            <GoogleReviewButton placeId={restaurant.google_place_id} theme={theme} />
-          )}
-
-          {!searchQuery && <FeaturedCarousel dishes={featuredDishes} theme={theme} showPrice={showPrice} onSelect={setSelectedDish} />}
-
-          {filteredCategories.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
-              className="text-center py-20 md:py-24"
-              style={{ backgroundColor: theme.colors.surface, borderRadius: theme.radius.lg, boxShadow: theme.shadow.sm }}
-            >
-              <div
-                className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6"
-                style={{ backgroundColor: theme.colors.surfaceMuted }}
-              >
-                <Search className="w-12 h-12" style={{ color: theme.colors.textSecondary }} />
-              </div>
-              <h3 className="text-2xl font-bold mb-2" style={{ color: theme.colors.textPrimary }}>
-                No items found
-              </h3>
-              <p className="text-lg mb-4" style={{ color: theme.colors.textSecondary }}>
-                Try searching with different keywords
-              </p>
-              <Button onClick={() => setSearchQuery('')} variant="outline" className="mt-4">
-                Clear Search
-              </Button>
-            </motion.div>
-          ) : (
-            <div className="space-y-6 md:space-y-8">
-              {categoryTree.map((category, categoryIndex) => (
-                <CategorySection
-                  key={category.id}
-                  category={category}
-                  index={categoryIndex}
-                  isExpanded={expandedCategories.has(category.id)}
-                  onToggle={() => toggleCategory(category.id)}
-                  theme={theme}
-                  layout={theme.layout}
-                  allowImages={allowImages}
-                  showPrice={showPrice}
-                  onSelectDish={setSelectedDish}
-                  registerRef={registerCategoryRef}
-                />
-              ))}
-            </div>
-          )}
-
-          <VisitUs restaurant={restaurant} theme={theme} />
-
-          {showWatermark && (
-            <div className="mt-16 text-center pb-8">
-              <div
-                className="inline-flex items-center gap-2 px-6 py-3 shadow-sm border"
-                style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderRadius: theme.radius.pill }}
-              >
-                <Utensils className="w-4 h-4" style={{ color: theme.colors.textSecondary }} />
-                <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
-                  Powered by <span className="font-bold" style={{ color: theme.colors.textPrimary }}>mtoool menu</span>
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <MobileQuickNav theme={theme} showScrollTop={showScrollTop} onScrollTop={scrollToTop} />
-
-      {selectedDish && <ImageModal dish={selectedDish} theme={theme} showPrice={showPrice} onClose={() => setSelectedDish(null)} />}
-    </motion.div>
+      <MenuClient slug={params.slug} />
+    </>
   );
 }
