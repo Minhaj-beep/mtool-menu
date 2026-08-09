@@ -26,10 +26,12 @@ type RestaurantLookup = {
 // failure there can make the whole lookup silently no-op instead of
 // erroring loudly, which is indistinguishable from "no custom domain
 // found" unless you go looking. A bare fetch has no such baggage.
-async function findRestaurantByDomain(hostname: string): Promise<RestaurantLookup | null> {
+async function findRestaurantByDomain(
+  hostname: string
+): Promise<{ restaurant: RestaurantLookup | null; debug: string }> {
   const url =
     `${SUPABASE_URL}/rest/v1/restaurants` +
-    `?select=slug,subscription_status,is_on_hold` +
+    `?select=slug,subscription_status,is_on_hold,custom_domain` +
     `&custom_domain=eq.${encodeURIComponent(hostname)}` +
     `&limit=1`;
 
@@ -43,10 +45,16 @@ async function findRestaurantByDomain(hostname: string): Promise<RestaurantLooku
     next: { revalidate: 60 },
   });
 
-  if (!res.ok) return null;
+  if (!res.ok) {
+    // Surface the *real* reason (bad column, RLS/permission issue, bad
+    // request, etc.) instead of silently treating every failure as
+    // "no matching restaurant" — those are very different problems.
+    const body = await res.text();
+    return { restaurant: null, debug: `http-${res.status}:${body.slice(0, 200)}` };
+  }
 
   const rows: RestaurantLookup[] = await res.json();
-  return rows[0] ?? null;
+  return { restaurant: rows[0] ?? null, debug: rows.length === 0 ? 'no-row' : 'ok' };
 }
 
 export async function middleware(request: NextRequest) {
@@ -70,20 +78,22 @@ export async function middleware(request: NextRequest) {
   }
 
   let restaurant: RestaurantLookup | null = null;
-  let lookupError: string | null = null;
+  let debug = '';
 
   try {
-    restaurant = await findRestaurantByDomain(hostname);
+    const result = await findRestaurantByDomain(hostname);
+    restaurant = result.restaurant;
+    debug = result.debug;
   } catch (err) {
-    lookupError = err instanceof Error ? err.message : 'unknown error';
+    debug = `throw:${err instanceof Error ? err.message : 'unknown error'}`;
   }
 
   // Unknown domain (or the lookup itself failed) — let it fall through
   // rather than silently rewriting to nothing. The debug header lets
-  // you tell these two cases apart from outside with curl -I.
+  // you tell these cases apart from outside with curl -I.
   if (!restaurant) {
     const res = NextResponse.next();
-    res.headers.set('x-custom-domain-lookup', lookupError ? `error:${lookupError}` : 'not-found');
+    res.headers.set('x-custom-domain-lookup', debug || 'not-found');
     return res;
   }
 
