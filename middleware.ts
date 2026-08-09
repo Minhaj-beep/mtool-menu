@@ -15,8 +15,6 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 type RestaurantLookup = {
   slug: string;
-  subscription_status: string;
-  is_on_hold: boolean;
 };
 
 // Plain fetch straight to Supabase's PostgREST endpoint instead of the
@@ -31,7 +29,10 @@ async function findRestaurantByDomain(
 ): Promise<{ restaurant: RestaurantLookup | null; debug: string }> {
   const url =
     `${SUPABASE_URL}/rest/v1/restaurants` +
-    `?select=slug,subscription_status,is_on_hold,custom_domain` +
+    // Only select what the middleware actually needs — every extra
+    // column is one more thing that can 400 if the live schema drifts
+    // from what's expected (as it did here).
+    `?select=slug` +
     `&custom_domain=eq.${encodeURIComponent(hostname)}` +
     `&limit=1`;
 

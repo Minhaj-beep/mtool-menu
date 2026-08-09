@@ -13,7 +13,7 @@ async function getRestaurantForMeta(slug: string) {
   const { data } = await supabase
     .from('restaurants')
     .select(
-      'name, slug, address, city, country, logo_url, banner_image_url, theme_color, subscription_status, is_on_hold, custom_domain'
+      'name, slug, address, city, country, logo_url, banner_image_url, theme_color, subscription_status, custom_domain'
     )
     .eq('slug', slug)
     .maybeSingle();
@@ -53,8 +53,7 @@ export async function generateMetadata({
     ? `https://${restaurant.custom_domain}`
     : `${APP_URL}/menu/${restaurant.slug}`;
 
-  const isUnavailable =
-    restaurant.is_on_hold || restaurant.subscription_status !== 'active';
+  const isUnavailable = restaurant.subscription_status !== 'active';
 
   return {
     title,

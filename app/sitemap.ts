@@ -8,17 +8,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const { data: restaurants } = await supabase
     .from('restaurants')
-    .select('slug, custom_domain, updated_at, subscription_status, is_on_hold')
+    .select('slug, custom_domain, updated_at, subscription_status')
     .eq('subscription_status', 'active');
 
-  const restaurantEntries: MetadataRoute.Sitemap = (restaurants ?? [])
-    .filter((r) => !r.is_on_hold)
-    .map((r) => ({
-      url: r.custom_domain ? `https://${r.custom_domain}` : `${APP_URL}/menu/${r.slug}`,
-      lastModified: r.updated_at ? new Date(r.updated_at) : undefined,
-      changeFrequency: 'daily',
-      priority: 0.8,
-    }));
+  const restaurantEntries: MetadataRoute.Sitemap = (restaurants ?? []).map((r) => ({
+    url: r.custom_domain ? `https://${r.custom_domain}` : `${APP_URL}/menu/${r.slug}`,
+    lastModified: r.updated_at ? new Date(r.updated_at) : undefined,
+    changeFrequency: 'daily',
+    priority: 0.8,
+  }));
 
   return [
     {
