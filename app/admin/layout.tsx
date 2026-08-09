@@ -16,6 +16,7 @@ import {
   LogOut,
   Menu as MenuIcon,
   X,
+  ShieldCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -28,6 +29,7 @@ export default function AdminLayout({
   const pathname = usePathname();
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
     const {
@@ -37,6 +39,9 @@ export default function AdminLayout({
         router.replace('/login');
       } else {
         setLoading(false);
+        // role lives in the built-in auth user's app_metadata — there is
+        // no separate `users` table to query.
+        setIsSuperAdmin(session.user.app_metadata?.role === 'super_admin');
       }
     });
 
@@ -73,6 +78,9 @@ export default function AdminLayout({
     { name: 'QR Code', href: '/admin/qr-code', icon: QrCode },
     // { name: 'Subscription', href: '/admin/subscription', icon: CreditCard },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
+    ...(isSuperAdmin
+      ? [{ name: 'Master Admin', href: '/admin/master', icon: ShieldCheck }]
+      : []),
   ];
 
   return (
