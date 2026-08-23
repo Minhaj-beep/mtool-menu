@@ -1026,7 +1026,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="flex items-center justify-between">
-              <Label htmlFor="show_about_us">Show About Us on menu page</Label>
+              <Label htmlFor="show_about_us">Show About Us</Label>
               <Switch
                 id="show_about_us"
                 checked={formData.show_about_us}
@@ -1037,10 +1037,10 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="about_us">Tell customers about your restaurant</Label>
+              {/* <Label htmlFor="about_us">Tell customers about your restaurant</Label> */}
               <Textarea
                 id="about_us"
-                placeholder="Share your story, cuisine, or what makes your restaurant special..."
+                placeholder="Share your story here..."
                 rows={5}
                 value={formData.about_us}
                 onChange={(e) =>
@@ -1060,7 +1060,7 @@ export default function SettingsPage() {
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Upload up to {MAX_GALLERY_IMAGES} photos of your restaurant, ambience, or dishes to show on your public menu page.
+              Upload up to {MAX_GALLERY_IMAGES} photos.
             </p>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
