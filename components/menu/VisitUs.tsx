@@ -4,36 +4,12 @@ import {
   Phone,
   Clock,
   MapPin,
-  Facebook,
-  Instagram,
-  Twitter,
-  Youtube,
   Globe,
-  MessageCircle,
 } from 'lucide-react';
 import type { Restaurant } from '@/lib/types/database';
 import type { RestaurantTheme } from '@/lib/theme/theme-engine';
 import { formatOpeningHours, isRestaurantOpenNow } from '@/lib/utils/opening-hours';
-
-// Social icon mapping with fallback
-const SOCIAL_ICON_MAP: Record<string, React.ComponentType<{ className?: string; color?: string }>> = {
-  facebook: Facebook,
-  instagram: Instagram,
-  twitter: Twitter,
-  youtube: Youtube,
-  whatsapp: MessageCircle,
-  website: Globe,
-};
-
-function normalizeSocialUrl(platform: string, value: string): string {
-  if (!value) return '';
-  if (/^https?:\/\//i.test(value)) return value;
-  if (platform === 'whatsapp') {
-    const digits = value.replace(/[^\d]/g, '');
-    return `https://wa.me/${digits}`;
-  }
-  return `https://${value.replace(/^@/, '')}`;
-}
+import { normalizeSocialUrl, SOCIAL_ICON_MAP } from '@/lib/utils/social';
 
 export function VisitUs({ restaurant, theme }: { restaurant: Restaurant; theme: RestaurantTheme }) {
   const contactNumbers = restaurant.show_contact_numbers ? restaurant.contact_numbers ?? [] : [];

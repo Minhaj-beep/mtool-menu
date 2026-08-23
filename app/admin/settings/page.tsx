@@ -12,6 +12,8 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import { Restaurant } from '@/lib/types/database';
@@ -32,9 +34,13 @@ import {
   Globe,
   MessageCircle,
   Clock,
+  BookOpen,
+  Images,
+  Trash2,
+  Loader2,
 } from 'lucide-react';
 import { WEEKDAYS, DEFAULT_DAY_HOURS } from '@/lib/utils/opening-hours';
-import type { OpeningHours, SocialLinks } from '@/lib/types/database';
+import type { OpeningHours, SocialLinks, GalleryImage } from '@/lib/types/database';
 
 const SOCIAL_FIELDS: { key: keyof SocialLinks; label: string; icon: any; placeholder: string }[] = [
   { key: 'facebook', label: 'Facebook', icon: Facebook, placeholder: 'https://facebook.com/yourpage' },
@@ -73,7 +79,13 @@ export default function SettingsPage() {
     show_contact_numbers: true,
     show_social_media: true,
     show_price: true,
+    about_us: '',
+    show_about_us: true,
+    gallery_images: [] as GalleryImage[],
   });
+
+  const [uploadingGalleryImage, setUploadingGalleryImage] = useState(false);
+  const galleryFileInputRef = useRef<HTMLInputElement>(null);
 
   /* ================= Load ================= */
 
@@ -122,6 +134,9 @@ export default function SettingsPage() {
         show_contact_numbers: data.show_contact_numbers ?? true,
         show_social_media: data.show_social_media ?? true,
         show_price: data.show_price ?? true,
+        about_us: data.about_us ?? '',
+        show_about_us: data.show_about_us ?? true,
+        gallery_images: data.gallery_images ?? [],
       });
     } catch (err: any) {
       toast.error(err.message || 'Failed to load restaurant');
@@ -192,6 +207,100 @@ export default function SettingsPage() {
       ...prev,
       logo_url: '',
     }));
+  };
+
+  /* ================= Gallery ================= */
+
+  const handleGalleryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) {
+        toast.error(`${file.name} is not an image`);
+        continue;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`${file.name} is larger than 5MB`);
+        continue;
+      }
+    }
+
+    const validFiles = files.filter(
+      (f) => f.type.startsWith('image/') && f.size <= 5 * 1024 * 1024
+    );
+    if (validFiles.length === 0) {
+      if (galleryFileInputRef.current) galleryFileInputRef.current.value = '';
+      return;
+    }
+
+    setUploadingGalleryImage(true);
+
+    try {
+      const uploaded: GalleryImage[] = [];
+
+      for (const file of validFiles) {
+        const presignedResponse = await fetch('/api/gallery/presigned-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileName: file.name, fileType: file.type }),
+        });
+
+        const presignedData = await presignedResponse.json();
+        if (!presignedResponse.ok) throw new Error(presignedData.error);
+
+        const uploadResponse = await fetch(presignedData.uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': file.type },
+          body: file,
+        });
+        if (!uploadResponse.ok) throw new Error('Upload failed');
+
+        uploaded.push({ url: presignedData.fileUrl, key: presignedData.key });
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        gallery_images: [...prev.gallery_images, ...uploaded],
+      }));
+
+      toast.success(
+        uploaded.length > 1 ? `${uploaded.length} photos uploaded` : 'Photo uploaded'
+      );
+    } catch (err: any) {
+      toast.error(err.message || 'Upload failed');
+    } finally {
+      setUploadingGalleryImage(false);
+      if (galleryFileInputRef.current) galleryFileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveGalleryImage = async (image: GalleryImage) => {
+    // Optimistically remove from UI
+    setFormData((prev) => ({
+      ...prev,
+      gallery_images: prev.gallery_images.filter((img) => img.key !== image.key),
+    }));
+
+    try {
+      const response = await fetch('/api/gallery/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: image.key }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+
+      setRestaurant(data.restaurant);
+      toast.success('Photo removed');
+    } catch (err: any) {
+      // Roll back on failure
+      setFormData((prev) => ({
+        ...prev,
+        gallery_images: [...prev.gallery_images, image],
+      }));
+      toast.error(err.message || 'Failed to remove photo');
+    }
   };
 
   /* ================= Contact Numbers ================= */
@@ -890,6 +999,90 @@ export default function SettingsPage() {
                   show_price: e.target.checked,
                 })
               }
+            />
+          </div>
+
+          {/* ================= About Us ================= */}
+          <div className="pt-6 border-t space-y-4">
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-muted-foreground" />
+              <h3 className="text-lg font-semibold">About Us</h3>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="show_about_us">Show About Us on menu page</Label>
+              <Switch
+                id="show_about_us"
+                checked={formData.show_about_us}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, show_about_us: checked })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="about_us">Tell customers about your restaurant</Label>
+              <Textarea
+                id="about_us"
+                placeholder="Share your story, cuisine, or what makes your restaurant special..."
+                rows={5}
+                value={formData.about_us}
+                onChange={(e) =>
+                  setFormData({ ...formData, about_us: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          {/* ================= Gallery ================= */}
+          <div className="pt-6 border-t space-y-4">
+            <div className="flex items-center gap-2">
+              <Images className="w-5 h-5 text-muted-foreground" />
+              <h3 className="text-lg font-semibold">Gallery</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Upload photos of your restaurant, ambience, or dishes to show on your public menu page.
+            </p>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {formData.gallery_images.map((img) => (
+                <div key={img.key} className="relative group aspect-square rounded-lg overflow-hidden border">
+                  <img src={img.url} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveGalleryImage(img)}
+                    className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label="Remove photo"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => galleryFileInputRef.current?.click()}
+                disabled={uploadingGalleryImage}
+                className="aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+              >
+                {uploadingGalleryImage ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Upload className="w-5 h-5" />
+                )}
+                <span className="text-xs">
+                  {uploadingGalleryImage ? 'Uploading...' : 'Add photos'}
+                </span>
+              </button>
+            </div>
+
+            <input
+              ref={galleryFileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handleGalleryImageUpload}
             />
           </div>
 

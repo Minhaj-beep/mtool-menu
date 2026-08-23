@@ -15,6 +15,9 @@ import { SkeletonLoader } from '@/components/menu/SkeletonLoader';
 import { MobileQuickNav } from '@/components/menu/MobileQuickNav';
 import { GoogleReviewButton } from '@/components/menu/GoogleReviewButton';
 import { VisitUs } from '@/components/menu/VisitUs';
+import { AboutUs } from '@/components/menu/AboutUs';
+import { Gallery } from '@/components/menu/Gallery';
+import { QuickContactDock } from '@/components/menu/QuickContactDock';
 import { UnavailableScreen, MenuNotFoundScreen } from '@/components/menu/StatusScreens';
 
 export default function MenuClient({ slug }: { slug: string }) {
@@ -109,6 +112,8 @@ export default function MenuClient({ slug }: { slug: string }) {
         )}
 
         <div className="py-8 md:py-12">
+          {!searchQuery && <AboutUs restaurant={restaurant} theme={theme} />}
+
           {showGoogleReview && restaurant.google_place_id && (
             <GoogleReviewButton placeId={restaurant.google_place_id} theme={theme} />
           )}
@@ -159,6 +164,8 @@ export default function MenuClient({ slug }: { slug: string }) {
             </div>
           )}
 
+          {!searchQuery && <Gallery images={restaurant.gallery_images} theme={theme} />}
+
           <VisitUs restaurant={restaurant} theme={theme} />
 
           {showWatermark && (
@@ -176,6 +183,8 @@ export default function MenuClient({ slug }: { slug: string }) {
           )}
         </div>
       </div>
+
+      <QuickContactDock restaurant={restaurant} theme={theme} />
 
       <MobileQuickNav theme={theme} showScrollTop={showScrollTop} onScrollTop={scrollToTop} />
 

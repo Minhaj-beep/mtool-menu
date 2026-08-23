@@ -40,6 +40,12 @@ export interface SocialLinks {
   [key: string]: string | undefined;
 }
 
+export interface GalleryImage {
+  url: string;
+  key: string; // S3 object key, needed to delete the file later
+  caption?: string;
+}
+
 export interface DayHours {
   open: string; // "10:30"
   close: string; // "20:30"
@@ -75,6 +81,11 @@ export interface Restaurant {
   show_social_media: boolean;
   show_contact_numbers: boolean;
   show_price: boolean;
+
+  // 📖 About Us / 🖼️ Gallery
+  about_us: string | null;
+  show_about_us: boolean;
+  gallery_images: GalleryImage[] | null;
 
   // 🎨 Branding / theming (see lib/theme/theme-engine.ts)
   secondary_theme_color: string | null;

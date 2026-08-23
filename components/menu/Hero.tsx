@@ -7,9 +7,12 @@ import { toast } from 'sonner';
 import type { Restaurant } from '@/lib/types/database';
 import type { RestaurantTheme } from '@/lib/theme/theme-engine';
 import { hexToRgba } from '@/lib/theme/theme-engine';
+import { isRestaurantOpenNow } from '@/lib/utils/opening-hours';
 
 export function Hero({ restaurant, theme }: { restaurant: Restaurant; theme: RestaurantTheme }) {
   const hasBanner = theme.hero !== 'minimal' && !!theme.bannerImageUrl;
+  const openNow = isRestaurantOpenNow(restaurant.opening_hours);
+  const onDark = hasBanner || theme.hero !== 'minimal';
 
   const handleShare = async () => {
     const url = typeof window !== 'undefined' ? window.location.href : '';
@@ -72,8 +75,8 @@ export function Hero({ restaurant, theme }: { restaurant: Restaurant; theme: Res
         aria-label="Share this menu"
         className="absolute top-4 right-4 sm:top-6 sm:right-6 lg:right-8 z-10 w-11 h-11 rounded-full flex items-center justify-center backdrop-blur-md transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
         style={{
-          backgroundColor: hexToRgba('#ffffff', hasBanner || theme.hero !== 'minimal' ? 0.18 : 0.08),
-          color: hasBanner || theme.hero !== 'minimal' ? '#ffffff' : theme.colors.textPrimary,
+          backgroundColor: hexToRgba('#ffffff', onDark ? 0.18 : 0.08),
+          color: onDark ? '#ffffff' : theme.colors.textPrimary,
           outlineColor: theme.colors.primary,
         }}
       >
@@ -107,10 +110,28 @@ export function Hero({ restaurant, theme }: { restaurant: Restaurant; theme: Res
           )}
 
           <div className="text-center sm:text-left flex-1">
+            {openNow !== null && (
+              <div
+                className="inline-flex items-center gap-1.5 mb-2 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-md"
+                style={{
+                  backgroundColor: openNow
+                    ? hexToRgba('#22c55e', onDark ? 0.22 : 0.12)
+                    : hexToRgba('#ef4444', onDark ? 0.22 : 0.12),
+                  color: openNow ? (onDark ? '#4ade80' : '#16a34a') : onDark ? '#f87171' : '#dc2626',
+                }}
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ backgroundColor: openNow ? '#22c55e' : '#ef4444' }}
+                />
+                {openNow ? 'Open now' : 'Closed now'}
+              </div>
+            )}
+
             <h1
               className="text-4xl md:text-5xl lg:text-6xl font-bold mb-2 drop-shadow-lg"
               style={{
-                color: hasBanner || theme.hero !== 'minimal' ? '#ffffff' : theme.colors.textPrimary,
+                color: onDark ? '#ffffff' : theme.colors.textPrimary,
                 fontFamily: theme.font.family,
               }}
             >

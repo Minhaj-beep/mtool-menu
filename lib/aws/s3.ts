@@ -22,9 +22,11 @@ const BUCKET_NAME = process.env.S3_BUCKET_NAME || '';
 export async function generatePresignedUploadUrl(
   restaurantId: string,
   fileName: string,
-  fileType: string
-): Promise<{ uploadUrl: string; fileUrl: string }> {
-  const key = `restaurants/${restaurantId}/${Date.now()}-${fileName}`;
+  fileType: string,
+  folder?: string
+): Promise<{ uploadUrl: string; fileUrl: string; key: string }> {
+  const prefix = folder ? `restaurants/${restaurantId}/${folder}` : `restaurants/${restaurantId}`;
+  const key = `${prefix}/${Date.now()}-${fileName}`;
 
   const command = new PutObjectCommand({
     Bucket: BUCKET_NAME,
@@ -40,7 +42,7 @@ export async function generatePresignedUploadUrl(
 
   const fileUrl = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 
-  return { uploadUrl, fileUrl };
+  return { uploadUrl, fileUrl, key };
 }
 
 /* -------------------------------------------------------------------------- */
