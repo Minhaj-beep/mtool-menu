@@ -26,7 +26,18 @@ function useDockActions(restaurant: Restaurant): DockAction[] {
   }
 
   const addressParts = [restaurant.address, restaurant.city, restaurant.country].filter(Boolean);
-  if (addressParts.length > 0) {
+  if (restaurant.google_place_id) {
+    // Precise: resolves to the exact pinned location, not a text-search guess.
+    actions.push({
+      key: 'directions',
+      label: 'Directions',
+      href: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        addressParts.join(', ') || restaurant.name
+      )}&query_place_id=${restaurant.google_place_id}`,
+      icon: MapPin,
+      external: true,
+    });
+  } else if (addressParts.length > 0) {
     actions.push({
       key: 'directions',
       label: 'Directions',
