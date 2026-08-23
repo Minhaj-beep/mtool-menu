@@ -46,6 +46,10 @@ export interface GalleryImage {
   caption?: string;
 }
 
+// Gallery photo cap — same limit enforced client-side (admin settings) and
+// server-side (gallery presigned-url route) so it can't be bypassed.
+export const MAX_GALLERY_IMAGES = 5;
+
 export interface DayHours {
   open: string; // "10:30"
   close: string; // "20:30"

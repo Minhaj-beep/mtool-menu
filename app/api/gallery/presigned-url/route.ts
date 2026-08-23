@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route';
 import { generatePresignedUploadUrl } from '@/lib/aws/s3';
+import { MAX_GALLERY_IMAGES, type GalleryImage } from '@/lib/types/database';
 
 // Gallery uploads are available on every subscription plan — no plan/limit check here,
 // unlike /api/upload/presigned-url which gates dish photo uploads.
@@ -28,12 +29,20 @@ export async function POST(request: NextRequest) {
 
     const { data: restaurant, error: restaurantError } = await supabase
       .from('restaurants')
-      .select('id')
+      .select('id, gallery_images')
       .eq('owner_id', user.id)
       .single();
 
     if (restaurantError || !restaurant) {
       return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
+    }
+
+    const currentCount: number = (restaurant.gallery_images as GalleryImage[] | null)?.length ?? 0;
+    if (currentCount >= MAX_GALLERY_IMAGES) {
+      return NextResponse.json(
+        { error: `You can only have up to ${MAX_GALLERY_IMAGES} gallery photos. Remove one before adding another.` },
+        { status: 403 }
+      );
     }
 
     const { uploadUrl, fileUrl, key } = await generatePresignedUploadUrl(

@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Images, X, ChevronLeft, ChevronRight, Expand } from 'lucide-react';
 import type { GalleryImage } from '@/lib/types/database';
+import { MAX_GALLERY_IMAGES } from '@/lib/types/database';
 import type { RestaurantTheme } from '@/lib/theme/theme-engine';
 import { hexToRgba } from '@/lib/theme/theme-engine';
 
-const MAX_VISIBLE = 7;
+const MAX_VISIBLE = MAX_GALLERY_IMAGES;
 
 export function Gallery({
   images,

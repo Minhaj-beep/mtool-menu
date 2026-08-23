@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { WEEKDAYS, DEFAULT_DAY_HOURS } from '@/lib/utils/opening-hours';
 import type { OpeningHours, SocialLinks, GalleryImage } from '@/lib/types/database';
+import { MAX_GALLERY_IMAGES } from '@/lib/types/database';
 
 const SOCIAL_FIELDS: { key: keyof SocialLinks; label: string; icon: any; placeholder: string }[] = [
   { key: 'facebook', label: 'Facebook', icon: Facebook, placeholder: 'https://facebook.com/yourpage' },
@@ -215,6 +216,13 @@ export default function SettingsPage() {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
 
+    const slotsRemaining = MAX_GALLERY_IMAGES - formData.gallery_images.length;
+    if (slotsRemaining <= 0) {
+      toast.error(`You can only have up to ${MAX_GALLERY_IMAGES} gallery photos`);
+      if (galleryFileInputRef.current) galleryFileInputRef.current.value = '';
+      return;
+    }
+
     for (const file of files) {
       if (!file.type.startsWith('image/')) {
         toast.error(`${file.name} is not an image`);
@@ -226,9 +234,17 @@ export default function SettingsPage() {
       }
     }
 
-    const validFiles = files.filter(
+    let validFiles = files.filter(
       (f) => f.type.startsWith('image/') && f.size <= 5 * 1024 * 1024
     );
+
+    if (validFiles.length > slotsRemaining) {
+      toast.error(
+        `Only ${slotsRemaining} more photo${slotsRemaining === 1 ? '' : 's'} allowed (max ${MAX_GALLERY_IMAGES}) — uploading the first ${slotsRemaining}`
+      );
+      validFiles = validFiles.slice(0, slotsRemaining);
+    }
+
     if (validFiles.length === 0) {
       if (galleryFileInputRef.current) galleryFileInputRef.current.value = '';
       return;
@@ -1039,9 +1055,12 @@ export default function SettingsPage() {
             <div className="flex items-center gap-2">
               <Images className="w-5 h-5 text-muted-foreground" />
               <h3 className="text-lg font-semibold">Gallery</h3>
+              <span className="text-sm text-muted-foreground ml-auto">
+                {formData.gallery_images.length}/{MAX_GALLERY_IMAGES}
+              </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Upload photos of your restaurant, ambience, or dishes to show on your public menu page.
+              Upload up to {MAX_GALLERY_IMAGES} photos of your restaurant, ambience, or dishes to show on your public menu page.
             </p>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -1059,22 +1078,30 @@ export default function SettingsPage() {
                 </div>
               ))}
 
-              <button
-                type="button"
-                onClick={() => galleryFileInputRef.current?.click()}
-                disabled={uploadingGalleryImage}
-                className="aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
-              >
-                {uploadingGalleryImage ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Upload className="w-5 h-5" />
-                )}
-                <span className="text-xs">
-                  {uploadingGalleryImage ? 'Uploading...' : 'Add photos'}
-                </span>
-              </button>
+              {formData.gallery_images.length < MAX_GALLERY_IMAGES && (
+                <button
+                  type="button"
+                  onClick={() => galleryFileInputRef.current?.click()}
+                  disabled={uploadingGalleryImage}
+                  className="aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+                >
+                  {uploadingGalleryImage ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Upload className="w-5 h-5" />
+                  )}
+                  <span className="text-xs">
+                    {uploadingGalleryImage ? 'Uploading...' : 'Add photos'}
+                  </span>
+                </button>
+              )}
             </div>
+
+            {formData.gallery_images.length >= MAX_GALLERY_IMAGES && (
+              <p className="text-xs text-muted-foreground">
+                You've reached the {MAX_GALLERY_IMAGES}-photo limit. Remove a photo to add a new one.
+              </p>
+            )}
 
             <input
               ref={galleryFileInputRef}
